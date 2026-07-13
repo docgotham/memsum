@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "dmsum-local-routed": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "<repo-root>\\dist\\server.js",
+        "--registry",
+        "<data-root>\\.dmsum\\registry.json",
+        "--sync",
+        "<data-root>\\.dmsum\\sync.json"
+      ],
+      "env": {}
+    }
+  }
+}

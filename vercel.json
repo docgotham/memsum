@@ -1,0 +1,66 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "crons": [
+    {
+      "path": "/api/notifications",
+      "schedule": "* * * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/.well-known/mcp/:path*",
+      "destination": "/api/oauth"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource",
+      "destination": "/api/oauth"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/:path*",
+      "destination": "/api/oauth"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "/api/oauth"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server/:path*",
+      "destination": "/api/oauth"
+    },
+    {
+      "source": "/oauth/:path*",
+      "destination": "/api/oauth"
+    },
+    {
+      "source": "/version",
+      "destination": "/api/version"
+    },
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/mcp/:path*",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/hosted",
+      "destination": "/api/hosted"
+    },
+    {
+      "source": "/hosted/:path*",
+      "destination": "/api/hosted"
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "sum.memsum.ai" }],
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/",
+      "destination": "/api/audit"
+    }
+  ]
+}

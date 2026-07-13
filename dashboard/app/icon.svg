@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <title>Mem·Sum</title>
+  <defs>
+    <mask id="pleats">
+      <rect width="100" height="100" fill="white"/>
+      <g transform="rotate(-35 50 50) translate(50 50) scale(0.96) translate(-50 -48)" stroke="black" stroke-width="5" fill="none" stroke-linecap="round">
+        <path d="M38 30 Q36 38 40 44"/>
+        <path d="M52 27 Q50 36 54 43"/>
+        <path d="M66 31 Q63 39 66 45"/>
+      </g>
+    </mask>
+  </defs>
+  <g transform="rotate(-35 50 50) translate(50 50) scale(0.96) translate(-50 -48)">
+    <path d="M14 62 Q14 46 26 36 Q36 27 50 27 Q64 27 74 36 Q86 46 86 62 Q86 70 78 70 L22 70 Q14 70 14 62 Z" fill="#ed6506" mask="url(#pleats)"/>
+  </g>
+</svg>

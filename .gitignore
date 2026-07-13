@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env
+.dmsum/
+.mcp.json
+.claude/
+vault/
+vault-*/
+exports/
+tmp/
+*.docx
+*.tsbuildinfo
+
+.vercel
+supabase/.temp/

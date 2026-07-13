@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* The brand accent is a persimmon spectrum — the ripeness range of the
+   fruit — where Claude wears a single muted clay. Primary carries the mark
+   and CTAs; deep is hover/pressed; gold is badges and illustration warmth;
+   tint is a pale glow for callout surfaces. Text on primary must be the
+   warm near-black: vivid persimmon fails contrast under light text. */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --accent: #ed6506;
+  --accent-deep: #c62e1e;
+  --accent-gold: #f9c41f;
+  --accent-tint: #fff3d6;
+  --accent-contrast: #2a1305;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-gold: var(--accent-gold);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-contrast: var(--accent-contrast);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-brand: var(--font-nunito);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --accent: #f0762b;
+    --accent-deep: #e04a32;
+    --accent-gold: #f9c41f;
+    --accent-tint: #271805;
+    --accent-contrast: #1c0f04;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
