@@ -18,6 +18,38 @@ The server protects structure, provenance, IDs, timestamps, paths, coordination,
 
 The current product direction: a hosted Supabase/Postgres graph exposed through a remote MCP/API on Vercel. Local filesystem and Git-sync work remain useful prototype, export, backup, and development infrastructure, but they are no longer the core product sync architecture.
 
+## Current State And Invariants (2026-07-13)
+
+The product is live. The hosted MCP endpoint is `https://sum.memsum.ai/mcp` (the bare host
+`https://sum.memsum.ai` also serves MCP); the dashboard, site, and invite links are on
+`https://memsum.ai`. The legacy host `dmsum-hosted-mvp.vercel.app` keeps serving everything, so
+connectors registered against it continue to work. The kernel is open source (Apache-2.0) at
+https://github.com/docgotham/memsum, published as snapshots from a private operating archive.
+
+Naming invariants — prose says Mem·Sum; these machine-facing names are frozen on purpose and
+must not be renamed in a cleanup:
+
+- MCP tool names (`get_dmsum_home`, `get_dmsum_instructions`, …) and the `+sum`/`+dm`/`+dmsum`
+  invocation signals.
+- Connector token prefixes: new tokens mint `memsum_`; legacy `dmsum_` tokens are accepted
+  forever (tokens are stored as hashes, so validity is prefix-blind). Internal `dmsoat_` and
+  `dmsum_client_` strings are machine-facing.
+- `DMSUM_*` environment variable names, the `DMSUM.md` vault contract filename, local state
+  under `.dmsum/`, and the `LEGACY_PRODUCT_NAME` constant (its job is to say "DM Sum").
+- The MCP server identifies as `memsum-hosted`; the server card and the initialize response
+  must stay in lockstep.
+
+Applied migrations under `supabase/migrations/` are history, not source to edit. Changing
+database behavior or wording means a new migration; tests that pin migration text deliberately
+assert the strings that actually ran, including pre-rename "DM Sum" strings.
+
+Test discipline: run bare `npm test` (never piped through grep — a pipe masks the exit code).
+The live harness (`test/live.test.ts`) runs only when `DMSUM_TEST_DATABASE_URL` is set in the
+gitignored root `.env` and rolls back everything it touches. Public pages are pinned to code by
+drift tests — the tool catalog to the tool registry, pricing numbers to the limits migration,
+the privacy processor roster to the page — so page, code, and test change together in one
+commit or the suite fails.
+
 ## Vocabulary
 
 - `+sum` means add, save, update, ask about, or retrieve shared relationship memory.
