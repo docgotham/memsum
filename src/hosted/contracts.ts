@@ -232,7 +232,9 @@ export const createReminderSchema = z.object({
   scheduledFor: z
     .string()
     .datetime({ offset: true })
-    .describe("When the explicit reminder or scheduled notification should be sent."),
+    .describe(
+      "When to send it: a fully resolved ISO 8601 datetime with a UTC offset, for example 2026-07-15T09:00:00-07:00. Translate relative phrases like 'in an hour' into this form before calling; natural-language or offsetless times are rejected."
+    ),
   timezone: z.string().trim().min(1).max(64)
 });
 

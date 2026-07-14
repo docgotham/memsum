@@ -1349,6 +1349,8 @@ describe("Mem·Sum hosted Supabase schema", () => {
     expect(hostedMcpInstructions).toMatch(/Message from Dave for Lisa/);
     expect(hostedMcpInstructions).toMatch(/Dave wants to remind Lisa/);
     expect(hostedMcpInstructions).toMatch(/not the only SMS path/);
+    expect(hostedMcpInstructions).toMatch(/fully resolved ISO 8601 datetime with a UTC offset/);
+    expect(hostedMcpInstructions).toMatch(/natural-language or offsetless times are rejected/);
     expect(hostedMcpInstructions).toMatch(/do not claim final delivery/);
     expect(hostedMcpInstructions).toMatch(/more than two participants/);
     expect(hostedMcpInstructions).toMatch(/adds the sum's display name to the From envelope/);
