@@ -2900,3 +2900,50 @@ describe("Mem·Sum open kernel pre-flight", () => {
     expect(page).not.toMatch(/github\.com/);
   });
 });
+
+describe("Mem·Sum companion", () => {
+  it("derives sum handles identically in kernel and dashboard", async () => {
+    const kernel = await import("../src/hosted/supabase.js");
+    const dashboard = await import("../dashboard/lib/handles.js");
+    const samples = [
+      "Budapest Trip",
+      "Budapest Trip",
+      "Chelsea's Wedding",
+      "Café Zürich!",
+      "'Twas — the night",
+      "  ",
+      "Budapest trip"
+    ];
+    expect(dashboard.assignSumHandles(samples)).toEqual(kernel.assignSumHandles(samples));
+    expect(kernel.sumHandleForDisplayName("Chelsea's Wedding")).toBe("#chelseas-wedding");
+    expect(dashboard.sumHandleForDisplayName("Chelsea's Wedding")).toBe("#chelseas-wedding");
+  });
+
+  it("keeps the companion instruments-only and the wiki viewer read-only", async () => {
+    const companion = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "page.tsx"), "utf8");
+    // Instruments, not dialogue: the companion prepares speech (copy chips)
+    // and never delivers it — no send surface, decided 2026-07-18.
+    expect(companion).toContain("Instruments, not dialogue");
+    expect(companion).not.toMatch(/<textarea|<form/);
+    expect(companion).toContain('target="_blank"');
+    expect(companion).toContain("Read-only instruments");
+
+    const sums = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "sums", "page.tsx"), "utf8");
+    expect(sums).toContain('window.open("/companion"');
+
+    const wikiLib = await fs.readFile(path.join(process.cwd(), "dashboard", "lib", "wiki.ts"), "utf8");
+    // Stored content must never execute, and unexpanded provenance tokens
+    // must never reach a participant's eyes.
+    expect(wikiLib).toContain("html: false");
+    expect(wikiLib).toContain("WIKI_UPDATE_");
+    expect(wikiLib).toContain("noopener noreferrer");
+
+    const view = await fs.readFile(
+      path.join(process.cwd(), "dashboard", "app", "sums", "[id]", "wiki", "[...path]", "view.tsx"),
+      "utf8"
+    );
+    expect(view).toContain("renderWikiHtml");
+    expect(view).toContain("Download .md");
+    expect(view).not.toMatch(/<textarea|contentEditable/);
+  });
+});

@@ -347,6 +347,11 @@ export function SumDetail({ relationshipId }: { relationshipId: string }) {
                 Rename
               </button>
             ) : null}
+            {relationship ? (
+              <Link className="text-sm underline opacity-60 hover:opacity-100" href={`/sums/${relationshipId}/wiki`}>
+                Wiki
+              </Link>
+            ) : null}
           </div>
         )}
         <Link className="text-sm underline opacity-70" href="/sums">
