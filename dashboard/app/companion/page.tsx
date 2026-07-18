@@ -147,8 +147,10 @@ export default function CompanionPage() {
     };
   }, [load]);
 
+  // Deliberately does NOT clear the current list first: background refreshes
+  // (focus, 60s tick) swap the rows in place with no loading flash. selectSum
+  // clears before calling so switching sums still reads as a fresh load.
   const loadPages = useCallback(async (relationshipId: string) => {
-    setPages(null);
     setPagesError(null);
     const { data, error } = await supabaseBrowser()
       .from("wiki_pages")
@@ -163,6 +165,23 @@ export default function CompanionPage() {
     rows.sort((a, b) => (a.path === "wiki/index.md" ? -1 : b.path === "wiki/index.md" ? 1 : a.path.localeCompare(b.path)));
     setPages(rows);
   }, []);
+
+  // The wiki index tracks reality the same way the rest of the panel does:
+  // pages appear when agents write them and vanish when a deletion batch
+  // removes them. Without this, a deleted page haunts the list until the
+  // member re-enters the sum.
+  useEffect(() => {
+    if (!selectedId) return;
+    const refresh = () => void loadPages(selectedId);
+    window.addEventListener("focus", refresh);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 60_000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(interval);
+    };
+  }, [selectedId, loadPages]);
 
   // In-panel page reading (master-detail): openTarget is the page's URL
   // segments; the same candidates logic as the full viewer resolves them to a
@@ -202,6 +221,7 @@ export default function CompanionPage() {
     setOpenTarget(null);
     setPageRow(null);
     setPageMissing(false);
+    setPages(null);
     void loadPages(relationshipId);
   }
 

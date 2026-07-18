@@ -64,8 +64,10 @@ layering rather than widening:
   in-panel at slender width (`.wiki-compact` typography — phone-width prose;
   the fix for narrow columns is type, not width), with a back row to the
   sum. Wiki-links inside a rendered page are intercepted and followed
-  in-panel; external links keep new-tab + noopener. Content refetches on
-  focus so the panel tracks agent writes.
+  in-panel; external links keep new-tab + noopener. Page content refetches
+  on focus, and the wiki index refetches on focus plus the 60s visible tick,
+  so the panel tracks agent writes — and deletions: a removed page leaves
+  the list, and one someone is reading says it may have been removed.
 - **Full size is an explicit escalation into ONE reused window.** "Open
   full ↗" (and "Full index ↗") target the named browsing context
   `memsum-reader`: every escalation reuses the same window, so the third

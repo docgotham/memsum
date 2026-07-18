@@ -2917,6 +2917,9 @@ describe("Mem·Sum concurrent-edit safety", () => {
     const companion = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "page.tsx"), "utf8");
     expect(companion).toMatch(/it may have been removed/);
     expect(companion).toMatch(/setPageMissing/);
+    // The panel's wiki index refetches (focus + visible tick), so a deleted
+    // page leaves the list instead of haunting it until re-entry.
+    expect(companion).toMatch(/const refresh = \(\) => void loadPages\(selectedId\);/);
     const viewer = await fs.readFile(
       path.join(process.cwd(), "dashboard", "app", "sums", "[id]", "wiki", "[...path]", "view.tsx"),
       "utf8"
