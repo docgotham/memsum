@@ -53,9 +53,10 @@ fails if they ever diverge.
 
 ## Routes
 
-- `/companion` — the slender shell: filterable sums list (private/shared
-  grouping, live strip), then per-sum instruments (handle chips, member
-  chips, wiki index; index links open pages full-size in a new window).
+- `/companion` — the slender shell, three tabs mirroring the grammar: Sums
+  (#) — filterable list with private/shared grouping and the live strip;
+  People (@) — the address book; and the selected sum — per-sum instruments
+  (handle chips, member chips, wiki index reading in-panel).
 - `/sums/[id]/wiki` — full-size wiki index, grouped by the agent ontology
   under plain labels (plans, people/places/things, preferences, summaries).
 - `/sums/[id]/wiki/[...path]` — the rendered page: title, sum breadcrumb,
@@ -87,6 +88,24 @@ layering rather than widening:
 - **Widening stays the user's dial, not the design.** Chrome remembers the
   size an installed PWA is left at; the Companion never grows into a
   reading app — slender is its identity ("panel, not app").
+
+## The People tab — the address book (2026-07-18)
+
+The kernel's taken-handle guard speaks of "your address book"; this tab is
+that noun made visible, and it completes the grammar in the tab bar: Sums
+is #, People is @, [[...]] lives inside each sum. Assembled entirely from
+data the panel already loads (contacts plus the rosters embedded in the
+membership listing — no new reads, no kernel surface), by the kernel's own
+honesty rules: identity merges only when provable through a linked
+account, so two handles naming one linked person become one card wearing
+both nicknames, while two unclaimed same-named placeholders stay two
+cards. Each card: display name; "hasn't joined yet" for placeholders;
+@handle chips that copy `+dm @handle ` (pills copy); shared-sum links that
+pivot the panel into the sum (links navigate); and an honest "no handle
+yet" state for people you share sums with but cannot address — the
+visible demand-signal for the deferred assign-a-handle kernel increment
+(contacts are only born at sum creation today; whether that gap deserves
+a tool is a decision real usage should make).
 
 ## Deferred (increment 3+)
 

@@ -3111,6 +3111,97 @@ describe("Mem·Sum companion", () => {
     expect(companion).toContain("copy(`page:${pageRow.path}`, pageCitation(pageRow.title))");
     expect(companion).toMatch(/# names the\s+sum, @ a member, \[\[ \]\] a page/);
     expect(companionDoc).toMatch(/compress\s+in the list/);
+
+    // The People tab: the address book made visible — the @ axis of the
+    // grammar in the tab bar. Pills copy, links navigate; honesty states
+    // are spelled out; no forms appear (the read-only pin above covers it).
+    expect(companion).toContain('setTab("people")');
+    expect(companion).toContain("Your address book");
+    expect(companion).toContain("hasn't joined yet");
+    expect(companion).toContain("no handle yet");
+    expect(companion).toContain("copy(`people:${handle}`, `+dm ${handle} `)");
+    expect(companionDoc).toMatch(/Sums\s+is #, People is @/);
+  });
+
+  it("assembles the address book by the kernel's honesty rules", async () => {
+    const { buildAddressBook } = await import("../dashboard/lib/people.js");
+    const memberships = [
+      {
+        relationship_id: "r1",
+        displayName: "Dave-Lisa",
+        sumHandle: "#dave-lisa",
+        participants: [
+          { id: "p-self-1", user_id: "user-dave", display_name: "Dave" },
+          { id: "p-lisa-1", user_id: "user-lisa", display_name: "Lisa" }
+        ]
+      },
+      {
+        relationship_id: "r2",
+        displayName: "Wedding Plans",
+        sumHandle: "#wedding-plans",
+        participants: [
+          { id: "p-self-2", user_id: "user-dave", display_name: "Dave" },
+          { id: "p-lisa-2", user_id: "user-lisa", display_name: "Lisa G" },
+          { id: "p-carey-1", user_id: "user-carey", display_name: "Carey" },
+          { id: "p-ghost-1", user_id: null, display_name: "Aunt June" }
+        ]
+      },
+      {
+        relationship_id: "r3",
+        displayName: "Dave-Mike",
+        sumHandle: "#dave-mike",
+        participants: [
+          { id: "p-self-3", user_id: "user-dave", display_name: "Dave" },
+          { id: "p-mike-1", user_id: null, display_name: "Mike" }
+        ]
+      }
+    ];
+    const book = buildAddressBook({
+      selfUserId: "user-dave",
+      memberships,
+      contacts: [
+        { handle: "@lisa", relationship_id: "r1", participant_id: "p-lisa-1", display_name: "Lisa" },
+        { handle: "@mike", relationship_id: "r3", participant_id: "p-mike-1", display_name: "Mike" }
+      ]
+    });
+
+    // Lisa is one card (provable identity) spanning both sums in membership
+    // order; Mike is an unlinked contact bound to his home sum; Carey shares
+    // a sum but has no handle; Aunt June is a placeholder seat. Self never
+    // appears.
+    const lisa = book.find((person) => person.handles.includes("@lisa"));
+    expect(lisa).toMatchObject({ linked: true });
+    expect(lisa?.sums.map((sum) => sum.sumHandle)).toEqual(["#dave-lisa", "#wedding-plans"]);
+
+    const mike = book.find((person) => person.handles.includes("@mike"));
+    expect(mike).toMatchObject({ linked: false });
+    expect(mike?.sums.map((sum) => sum.sumHandle)).toEqual(["#dave-mike"]);
+
+    const carey = book.find((person) => person.displayName === "Carey");
+    expect(carey).toMatchObject({ linked: true, handles: [] });
+    expect(carey?.sums.map((sum) => sum.sumHandle)).toEqual(["#wedding-plans"]);
+
+    const june = book.find((person) => person.displayName === "Aunt June");
+    expect(june).toMatchObject({ linked: false, handles: [] });
+
+    expect(book.some((person) => person.displayName === "Dave")).toBe(false);
+
+    // Two handles resolving to one linked account are one card wearing both.
+    const twoNames = buildAddressBook({
+      selfUserId: "user-dave",
+      memberships,
+      contacts: [
+        { handle: "@lisa", relationship_id: "r1", participant_id: "p-lisa-1", display_name: "Lisa" },
+        { handle: "@lisa-g", relationship_id: "r2", participant_id: "p-lisa-2", display_name: "Lisa G" }
+      ]
+    });
+    const merged = twoNames.find((person) => person.handles.includes("@lisa"));
+    expect(merged?.handles).toEqual(["@lisa", "@lisa-g"]);
+    expect(twoNames.filter((person) => person.handles.length > 0)).toHaveLength(1);
+  });
+
+  it("teaches the citation grammar and keeps the render path safe", async () => {
+    const companionDoc = await fs.readFile(path.join(process.cwd(), "docs", "companion.md"), "utf8");
     expect(hostedMcpInstructions).toMatch(/\[\[Double brackets\]\] cite a wiki page/);
     expect(hostedMcpInstructions).toMatch(/travels fully qualified, as \[\[Our Cats\]\] #dave-lisa/);
     expect(hostedMcpInstructions).toMatch(/@ names who, # names where, \[\[\.\.\.\]\] names what/);

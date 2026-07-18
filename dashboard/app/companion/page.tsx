@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { assignSumHandles } from "@/lib/handles";
+import { buildAddressBook } from "@/lib/people";
 import { renderWikiHtml, storedPathCandidates, wikiPageHref, type WikiPageRow } from "@/lib/wiki";
 import { supabaseBrowser } from "@/lib/supabase";
 
@@ -39,6 +40,7 @@ interface MembershipRow {
 interface ContactRow {
   handle: string;
   relationship_id: string;
+  participant_id: string | null;
   display_name: string;
 }
 
@@ -59,7 +61,7 @@ export default function CompanionPage() {
   const [memberships, setMemberships] = useState<MembershipRow[]>([]);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [latestUpdateAt, setLatestUpdateAt] = useState<Record<string, string>>({});
-  const [tab, setTab] = useState<"sums" | "sum">("sums");
+  const [tab, setTab] = useState<"sums" | "people" | "sum">("sums");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [pages, setPages] = useState<WikiIndexRow[] | null>(null);
@@ -106,7 +108,7 @@ export default function CompanionPage() {
         .order("created_at", { ascending: true }),
       supabase
         .from("contacts")
-        .select("handle, relationship_id, display_name")
+        .select("handle, relationship_id, participant_id, display_name")
         .eq("owner_user_id", sessionData.session.user.id)
         .order("handle", { ascending: true }),
       supabase
@@ -285,6 +287,22 @@ export default function CompanionPage() {
   const chip =
     "inline-flex items-center gap-1 rounded-full border border-black/20 px-3 py-1 text-sm transition-colors hover:border-black/50 dark:border-white/25 dark:hover:border-white/60";
 
+  // The People tab: the @ axis of the grammar, assembled from data the panel
+  // already holds (contacts + the rosters embedded in memberships). Identity
+  // merges only when provable — the same honesty rule the kernel applies.
+  const addressBook = userId
+    ? buildAddressBook({
+        selfUserId: userId,
+        memberships: memberships.map((m) => ({
+          relationship_id: m.relationship_id,
+          displayName: m.relationships.display_name,
+          sumHandle: handleByRelationship.get(m.relationship_id) ?? "#sum",
+          participants: m.relationships.participants
+        })),
+        contacts
+      })
+    : [];
+
   // A page citation travels fully qualified: [[Title]] #sum-handle. The chip
   // knows which sum it came from, so the paste stays unambiguous even when
   // two sums hold same-titled pages. Sum trails the title deliberately —
@@ -340,6 +358,13 @@ export default function CompanionPage() {
               Sums
             </button>
             <button
+              className={`flex-1 rounded-md px-3 py-1 font-medium ${tab === "people" ? "bg-background shadow-sm" : "opacity-60"}`}
+              onClick={() => setTab("people")}
+              type="button"
+            >
+              People
+            </button>
+            <button
               className={`flex-1 rounded-md px-3 py-1 font-medium ${tab === "sum" ? "bg-background shadow-sm" : "opacity-60"} disabled:opacity-30`}
               disabled={!selected}
               onClick={() => selected && setTab("sum")}
@@ -376,6 +401,59 @@ export default function CompanionPage() {
                 </section>
               ) : null}
               {memberships.length === 0 ? <p className="text-sm opacity-60">No sums yet — start one from the dashboard.</p> : null}
+            </div>
+          ) : tab === "people" ? (
+            <div className="flex flex-col gap-2">
+              {/* The rule that keeps the card legible: pills copy, links
+                  navigate. An @chip prepares "+dm @handle "; a #sum link
+                  pivots the panel into that sum. */}
+              <h2 className="text-xs font-medium uppercase tracking-wide opacity-50">Your address book</h2>
+              {addressBook.length === 0 ? (
+                <p className="text-sm opacity-60">Nobody here yet — your address book fills as you share sums.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {addressBook.map((person) => (
+                    <li
+                      className="flex flex-col gap-1.5 rounded-lg border border-black/10 px-3 py-2 dark:border-white/15"
+                      key={person.key}
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-medium">{person.displayName}</span>
+                        {!person.linked ? <span className="shrink-0 text-xs opacity-50">hasn't joined yet</span> : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {person.handles.map((handle) => (
+                          <button
+                            className={chip}
+                            key={handle}
+                            onClick={() => copy(`people:${handle}`, `+dm ${handle} `)}
+                            title={`Copy +dm ${handle} — starts a message to ${person.displayName} in any chat`}
+                            type="button"
+                          >
+                            {copiedKey === `people:${handle}` ? "Copied" : handle}
+                          </button>
+                        ))}
+                        {person.handles.length === 0 ? <span className="text-xs opacity-50">no handle yet</span> : null}
+                      </div>
+                      {person.sums.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          {person.sums.map((sum) => (
+                            <button
+                              className="text-xs underline opacity-60 transition-opacity hover:opacity-100"
+                              key={sum.relationshipId}
+                              onClick={() => selectSum(sum.relationshipId)}
+                              title={`Open ${sum.displayName}`}
+                              type="button"
+                            >
+                              {sum.sumHandle}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ) : selected && openTarget ? (
             <div className="flex flex-col gap-3">
