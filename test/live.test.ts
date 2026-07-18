@@ -172,6 +172,82 @@ describeLive("Mem·Sum live graph (§16 harness)", () => {
     });
   }, 30000);
 
+  it("deletes a page for real — stale-guarded, revisions cascaded, the act recorded as an update", async () => {
+    await inRollback(async () => {
+      const dave = await seedUserWithRelationship({ displayName: "HarnessDave", relationshipName: "Deletion Sum" });
+
+      // Seed an index and a topic page in one batch.
+      const seeded = await q(
+        `select public.commit_update_batch_for_user('${batchPayload(dave.relationshipId, dave.selfParticipantId, [
+          { path: "wiki/index.md", title: "Index", content: "# Index\n\n- [[Budapest]]", expectedVersion: 0 },
+          { path: "wiki/topics/budapest.md", title: "Budapest", content: "# Budapest\n\nTrip planning.", expectedVersion: 0 }
+        ])}'::jsonb, '${dave.userId}') as r;`
+      );
+      expect(seeded.rows[0].r.ok).toBe(true);
+
+      // A stale delete (wrong version) is rejected and the page survives.
+      const staleDelete = await q(
+        `select public.commit_update_batch_for_user('${sqlJson({
+          relationshipId: dave.relationshipId,
+          participantId: dave.selfParticipantId,
+          agent: "live-harness",
+          displayText: "stale delete attempt",
+          wikiDeletes: [{ path: "wiki/topics/budapest.md", expectedVersion: 7 }]
+        })}'::jsonb, '${dave.userId}') as r;`
+      );
+      expect(staleDelete.rows[0].r).toMatchObject({ ok: false, reason: "stale", changedPaths: ["wiki/topics/budapest.md"] });
+
+      // Deleting a page that does not exist is stale too — the world moved,
+      // never silent success.
+      const absentDelete = await q(
+        `select public.commit_update_batch_for_user('${sqlJson({
+          relationshipId: dave.relationshipId,
+          participantId: dave.selfParticipantId,
+          agent: "live-harness",
+          displayText: "delete of a page that is not there",
+          wikiDeletes: [{ path: "wiki/topics/never-existed.md", expectedVersion: 1 }]
+        })}'::jsonb, '${dave.userId}') as r;`
+      );
+      expect(absentDelete.rows[0].r).toMatchObject({ ok: false, reason: "stale", changedPaths: ["wiki/topics/never-existed.md"] });
+
+      // The real thing: delete the page and unlink the index in ONE batch.
+      const deletion = await q(
+        `select public.commit_update_batch_for_user('${sqlJson({
+          relationshipId: dave.relationshipId,
+          participantId: dave.selfParticipantId,
+          agent: "live-harness",
+          displayText: "Removed the Budapest page — trip cancelled.",
+          wikiWrites: [{ path: "wiki/index.md", title: "Index", content: "# Index\n", expectedVersion: 1 }],
+          wikiDeletes: [{ path: "wiki/topics/budapest.md", expectedVersion: 1 }]
+        })}'::jsonb, '${dave.userId}') as r;`
+      );
+      expect(deletion.rows[0].r.ok).toBe(true);
+
+      // Gone means gone: no page row, no revisions for it (cascade), while
+      // the index kept its history and the deletion is a durable update.
+      const state = await q(
+        `select
+           (select count(*)::int from public.wiki_pages where relationship_id = '${dave.relationshipId}' and path = 'wiki/topics/budapest.md') as page_rows,
+           (select count(*)::int from public.page_revisions pr where pr.relationship_id = '${dave.relationshipId}' and pr.title = 'Budapest') as budapest_revisions,
+           (select version from public.wiki_pages where relationship_id = '${dave.relationshipId}' and path = 'wiki/index.md') as index_version,
+           (select count(*)::int from public.updates where relationship_id = '${dave.relationshipId}' and display_text = 'Removed the Budapest page — trip cancelled.') as deletion_updates;`
+      );
+      expect(state.rows[0]).toMatchObject({ page_rows: 0, budapest_revisions: 0, index_version: 2, deletion_updates: 1 });
+
+      // Deleting it again is stale — honest, not idempotent.
+      const repeat = await q(
+        `select public.commit_update_batch_for_user('${sqlJson({
+          relationshipId: dave.relationshipId,
+          participantId: dave.selfParticipantId,
+          agent: "live-harness",
+          displayText: "delete it twice",
+          wikiDeletes: [{ path: "wiki/topics/budapest.md", expectedVersion: 1 }]
+        })}'::jsonb, '${dave.userId}') as r;`
+      );
+      expect(repeat.rows[0].r).toMatchObject({ ok: false, reason: "stale", changedPaths: ["wiki/topics/budapest.md"] });
+    });
+  }, 30000);
+
   it("isolates accounts under RLS: relationships, pages, and contacts are invisible across owners", async () => {
     await inRollback(async () => {
       const a = await seedUserWithRelationship({

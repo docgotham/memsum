@@ -340,6 +340,52 @@ describe("Mem·Sum hosted MVP contracts", () => {
     expect(parsed.wikiWrites?.[0]?.expectedVersion).toBe(3);
   });
 
+  it("treats wikiDeletes as a first-class batch effect with delete-specific guards", () => {
+    // A deletion-only batch (plus the index unlink it should travel with) is
+    // a complete update: wikiDeletes counts toward the at-least-one-effect
+    // rule.
+    const parsed = commitUpdateBatchSchema.parse({
+      relationshipId: ids.relationshipId,
+      participantId: ids.participantId,
+      agent: "Dave-Codex",
+      sourceInteractionIds: [ids.interactionId],
+      displayText: "Removed the Sonoma weekend page — trip cancelled.",
+      readSet: [],
+      wikiDeletes: [{ path: "wiki/topics/sonoma-weekend.md", expectedVersion: 3 }]
+    });
+    expect(parsed.wikiDeletes?.[0]?.path).toBe("wiki/topics/sonoma-weekend.md");
+
+    // You can only delete a page you have read: expectedVersion 0 (absent)
+    // is a contradiction for a delete.
+    expect(() =>
+      commitUpdateBatchSchema.parse({
+        relationshipId: ids.relationshipId,
+        participantId: ids.participantId,
+        agent: "Dave-Codex",
+        sourceInteractionIds: [ids.interactionId],
+        displayText: "Delete an unread page.",
+        readSet: [],
+        wikiDeletes: [{ path: "wiki/topics/sonoma-weekend.md", expectedVersion: 0 }]
+      })
+    ).toThrow();
+
+    // Writing and deleting the same path in one batch is incoherent.
+    expect(() =>
+      commitUpdateBatchSchema.parse({
+        relationshipId: ids.relationshipId,
+        participantId: ids.participantId,
+        agent: "Dave-Codex",
+        sourceInteractionIds: [ids.interactionId],
+        displayText: "Write and delete the same page.",
+        readSet: [],
+        wikiWrites: [
+          { path: "wiki/topics/sonoma-weekend.md", title: "Sonoma Weekend", expectedVersion: 3, content: "# Sonoma\n" }
+        ],
+        wikiDeletes: [{ path: "wiki/topics/sonoma-weekend.md", expectedVersion: 3 }]
+      })
+    ).toThrow();
+  });
+
   it("accepts valid hosted create_reminder input", () => {
     expect(
       createReminderSchema.parse({
@@ -1666,9 +1712,12 @@ describe("Mem·Sum discovery and onboarding surfaces", () => {
 
     expect(byName.get("read_page")?.annotations).toMatchObject({ readOnlyHint: true, idempotentHint: true });
     expect(byName.get("list_activity")?.annotations).toMatchObject({ readOnlyHint: true, openWorldHint: false });
+    // destructiveHint became true when wikiDeletes shipped (2026-07-18): the
+    // batch can permanently remove pages, and the safety annotation must say
+    // so honestly.
     expect(byName.get("commit_update_batch")?.annotations).toMatchObject({
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
       openWorldHint: true
     });
@@ -2819,6 +2868,60 @@ describe("Mem·Sum concurrent-edit safety", () => {
     expect(migration).toMatch(/revoke all on function public\.commit_update_batch_impl/);
     expect(migration).toMatch(/return public\.commit_update_batch_impl\(payload, auth\.uid\(\)\)/);
     expect(migration).toMatch(/return public\.commit_update_batch_impl\(payload, v_actor_user_id\)/);
+  });
+
+  it("deletes pages for real, under the same locks, and says so on every surface", async () => {
+    const migration = await fs.readFile(
+      path.join(process.cwd(), "supabase", "migrations", "20260718220000_wiki_page_deletion.sql"),
+      "utf8"
+    );
+    // Delete targets join the lock union, the version check runs under the
+    // lock, and an absent page counts as stale — never as silent success.
+    expect(migration).toMatch(/from jsonb_array_elements\(coalesce\(payload -> 'wikiDeletes', '\[\]'::jsonb\)\) x/);
+    expect(migration).toMatch(/if v_page\.id is null or v_page\.version <> v_expected_version then/);
+    expect(migration).toMatch(/delete from public\.wiki_pages\s+where relationship_id = v_relationship_id and path = v_item ->> 'path';/);
+    // Hard delete by doctrine: the migration is function-only — no
+    // soft-delete column, no schema additions that could hold a lingering
+    // copy. (The comment prose may say "tombstone" while rejecting one.)
+    expect(migration).not.toMatch(/deleted_at/);
+    expect(migration).not.toMatch(/add column/i);
+    expect(migration).not.toMatch(/create table/i);
+
+    // The revisions cascade is what makes "the content leaves the database"
+    // true — pin the FK that carries it.
+    const baseline = await fs.readFile(
+      path.join(process.cwd(), "supabase", "migrations", "20260506120000_hosted_mvp.sql"),
+      "utf8"
+    );
+    expect(baseline).toMatch(/page_id uuid not null references public\.wiki_pages\(id\) on delete cascade/);
+
+    // The operating contract carries the norms Dave set: user-directed only,
+    // propose-never-perform, carry-forward, narrated removal, and the
+    // no-gaslighting check.
+    expect(hostedMcpInstructions).toMatch(/Deletion is real and user-directed/);
+    expect(hostedMcpInstructions).toMatch(/propose deletions, never perform them unprompted/);
+    expect(hostedMcpInstructions).toMatch(/carry forward still-true facts into surviving pages/);
+    expect(hostedMcpInstructions).toMatch(/check list_activity for a removal before saying it never existed/);
+    expect(hostedRecommendedWorkflow.join("\n")).toMatch(/wikiDeletes in commit_update_batch/);
+    expect(hostedResolvedContactWorkflow.join("\n")).toMatch(/wikiDeletes in commit_update_batch/);
+
+    // The tool tells its own truth: description mentions deletion, and the
+    // /tools page blurb says removal stays on the record.
+    const mcpSource = await fs.readFile(path.join(process.cwd(), "src", "hosted", "mcp.ts"), "utf8");
+    expect(mcpSource).toMatch(/wikiDeletes removes pages permanently/);
+    const toolsPage = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "tools", "page.tsx"), "utf8");
+    expect(toolsPage).toMatch(/Page removal happens here too/);
+
+    // Member surfaces distinguish removed from loading and point at the
+    // durable record instead of a dead end.
+    const companion = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "page.tsx"), "utf8");
+    expect(companion).toMatch(/it may have been removed/);
+    expect(companion).toMatch(/setPageMissing/);
+    const viewer = await fs.readFile(
+      path.join(process.cwd(), "dashboard", "app", "sums", "[id]", "wiki", "[...path]", "view.tsx"),
+      "utf8"
+    );
+    expect(viewer).toMatch(/it may have been removed/);
   });
 });
 

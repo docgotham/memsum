@@ -232,9 +232,9 @@ function createHostedMcpServer(): McpServer {
     {
       title: "Commit update batch",
       description:
-        "Atomically publish one coherent hosted wiki/preference/resource/attention update after reading current versions. If any expected version is stale, reread changed paths, revise the private draft, and retry.",
+        "Atomically publish one coherent hosted wiki/preference/resource/attention update after reading current versions. If any expected version is stale, reread changed paths, revise the private draft, and retry. wikiDeletes removes pages permanently — only on the participant's clear direction, carrying forward surviving facts in the same batch.",
       inputSchema: commitUpdateBatchSchema,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
     },
     (input) => invokeHostedTool(input, (handler, value) => handler.commitUpdateBatch(value))
   );

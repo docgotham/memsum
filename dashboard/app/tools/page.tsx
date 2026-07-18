@@ -87,7 +87,8 @@ const WRITERS: Array<{ tool: string; title: string; blurb: string; sms: boolean 
   {
     tool: "commit_update_batch",
     title: "Publish an update",
-    blurb: "Writes page and preference changes as one all-or-nothing batch, and can ping members you name. Stale drafts are rejected, never merged over newer work.",
+    blurb:
+      "Writes page and preference changes as one all-or-nothing batch, and can ping members you name. Stale drafts are rejected, never merged over newer work. Page removal happens here too — only when you ask for it, and the removal itself stays on the record.",
     sms: true
   },
   {

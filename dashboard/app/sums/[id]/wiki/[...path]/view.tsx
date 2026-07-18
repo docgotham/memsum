@@ -93,7 +93,10 @@ export function WikiPageView({ relationshipId, segments }: { relationshipId: str
       ) : error ? (
         <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">{error}</p>
       ) : !page ? (
-        <p className="opacity-70">No page lives at this path in this sum.</p>
+        <p className="opacity-70">
+          No page lives at this path in this sum — it may have been removed. Ask your agent what happened to it; removals
+          stay on the record.
+        </p>
       ) : (
         <>
           <article

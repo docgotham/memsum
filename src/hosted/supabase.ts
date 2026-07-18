@@ -390,7 +390,10 @@ export function buildUpdateBatchRejectionRecord(
     reason: reason.trim().slice(0, REJECTION_REASON_MAX_LENGTH) || "rejected",
     changed_paths: paths,
     read_set_size: input.readSet.length,
-    wiki_write_paths: (input.wikiWrites ?? []).map((write) => write.path).slice(0, REJECTION_PATHS_MAX),
+    wiki_write_paths: [...(input.wikiWrites ?? []).map((write) => write.path), ...(input.wikiDeletes ?? []).map((item) => item.path)].slice(
+      0,
+      REJECTION_PATHS_MAX
+    ),
     preference_write_count: input.preferenceWrites?.length ?? 0
   };
 }

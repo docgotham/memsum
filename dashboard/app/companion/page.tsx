@@ -67,6 +67,7 @@ export default function CompanionPage() {
   const [openTarget, setOpenTarget] = useState<string[] | null>(null);
   const [pageRow, setPageRow] = useState<WikiPageRow | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [pageMissing, setPageMissing] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const copiedTimer = useRef<number | null>(null);
 
@@ -179,7 +180,12 @@ export default function CompanionPage() {
       setPageError("This page could not be loaded.");
       return;
     }
-    setPageRow(((data as WikiPageRow[]) ?? [])[0] ?? null);
+    const row = ((data as WikiPageRow[]) ?? [])[0] ?? null;
+    setPageRow(row);
+    // Loaded-but-absent is a real state, not eternal loading: pages can be
+    // deleted (a user-directed batch effect), and the focus refetch lands
+    // here when the page someone was reading gets removed.
+    setPageMissing(!row);
   }, [selectedId, openTarget]);
 
   useEffect(() => {
@@ -195,11 +201,13 @@ export default function CompanionPage() {
     setTab("sum");
     setOpenTarget(null);
     setPageRow(null);
+    setPageMissing(false);
     void loadPages(relationshipId);
   }
 
   function openInPanel(storedPath: string) {
     setPageRow(null);
+    setPageMissing(false);
     setOpenTarget(storedPath.replace(/^wiki\//, "").split("/").filter(Boolean));
   }
 
@@ -207,6 +215,7 @@ export default function CompanionPage() {
     setOpenTarget(null);
     setPageRow(null);
     setPageError(null);
+    setPageMissing(false);
   }
 
   // Wiki-links inside a rendered page keep the reading in the panel: internal
@@ -364,7 +373,13 @@ export default function CompanionPage() {
                 ) : null}
               </div>
               {pageError ? <p className="text-sm text-red-700 dark:text-red-400">{pageError}</p> : null}
-              {!pageRow && !pageError ? <p className="text-sm opacity-60">Loading…</p> : null}
+              {!pageRow && !pageError && pageMissing ? (
+                <p className="text-sm opacity-70">
+                  This page isn't in the sum anymore — it may have been removed. Ask your agent what happened to it;
+                  removals stay on the record.
+                </p>
+              ) : null}
+              {!pageRow && !pageError && !pageMissing ? <p className="text-sm opacity-60">Loading…</p> : null}
               {pageRow ? (
                 <>
                   <h2 className="text-base font-semibold tracking-tight">{pageRow.title}</h2>
@@ -380,7 +395,6 @@ export default function CompanionPage() {
                   </p>
                 </>
               ) : null}
-              {pageRow === null && !pageError && pages !== null && openTarget ? null : null}
             </div>
           ) : selected ? (
             <div className="flex flex-col gap-5">

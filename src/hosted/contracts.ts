@@ -180,6 +180,15 @@ export const hostedWikiWriteSchema = z.object({
   content: z.string().min(1)
 });
 
+// Deletion is permanent and user-directed: the page and its revisions leave
+// the graph, and the batch's update record (displayText prose) is what
+// remains of the act. expectedVersion starts at 1 — an agent can only delete
+// a page it has actually read.
+export const hostedWikiDeleteSchema = z.object({
+  path: graphPathSchema,
+  expectedVersion: z.number().int().min(1)
+});
+
 export const hostedPreferenceWriteSchema = z.object({
   participantId: uuidSchema,
   expectedVersion: z.number().int().min(0),
@@ -196,6 +205,12 @@ export const commitUpdateBatchSchema = z
     displayText: z.string().min(1),
     readSet: z.array(readSetItemSchema),
     wikiWrites: z.array(hostedWikiWriteSchema).optional(),
+    wikiDeletes: z
+      .array(hostedWikiDeleteSchema)
+      .optional()
+      .describe(
+        "Pages to remove permanently, only on the participant's clear direction. Carry forward still-true facts and update wiki/index.md in the same batch; narrate what was removed and why in displayText."
+      ),
     preferenceWrites: z.array(hostedPreferenceWriteSchema).optional(),
     resources: z.array(hostedResourceSchema).optional(),
     attentionParticipantIds: z.array(uuidSchema).optional(),
@@ -209,10 +224,18 @@ export const commitUpdateBatchSchema = z
   .refine(
     (input) =>
       Boolean(input.wikiWrites?.length) ||
+      Boolean(input.wikiDeletes?.length) ||
       Boolean(input.preferenceWrites?.length) ||
       Boolean(input.resources?.length) ||
       Boolean(input.attentionParticipantIds?.length),
     "Expected at least one hosted update effect"
+  )
+  .refine(
+    (input) => {
+      const deletePaths = new Set((input.wikiDeletes ?? []).map((item) => item.path));
+      return !(input.wikiWrites ?? []).some((write) => deletePaths.has(write.path));
+    },
+    "A batch cannot both write and delete the same wiki path"
   );
 
 export const createReminderSchema = z.object({

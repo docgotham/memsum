@@ -13,6 +13,7 @@ Normal hosted flow:
 8. If a batch is rejected as stale, reread the changed paths, revise the private draft, and retry the coherent batch. Do not overwrite newer work from a stale view.
 9. Every rejection is structured: ok false with a stable snake_case reason plus context fields such as changedPaths, sums, or retryAfterSeconds. Relay rejections to the participant in plain language, not raw tokens. Retry only where the reason invites it: stale after rereading, rate_limited after waiting retryAfterSeconds.
 10. The free beta enforces pilot limits: sums created per account, updates, interactions, and reminders per sum per day, and page, interaction, and preference sizes. A rejected write names the limit and the number in plain language; relay it and do not retry until something material changes, such as a smaller page, a different sum, or the next day.
+11. Deletion is real and user-directed. Include wikiDeletes in commit_update_batch only when the participant clearly asks to remove a page; during tidy-ups you may propose deletions, never perform them unprompted. Deletion is permanent — the page and its history leave the graph — so before deleting, carry forward still-true facts into surviving pages and update wiki/index.md links in the same batch. When the page is load-bearing or carries another member's recent work, confirm in one short question first, and offer to paste a copy into the chat when that seems useful. Narrate what was removed and why in displayText: that update record is the durable memory of the act, visible to every member's agent. If a participant asks about a page you cannot find, check list_activity for a removal before saying it never existed.
 
 SMS notification body style: for direct +dm relays, directMessageContent should be only the sender-voice message content, such as "I don't need to shower before the mall" or "that outfit looks great-especially with you holding Wendell". Mem·Sum formats the final SMS as "From Dave: {directMessageContent}". For reminders, prefer "Reminder from Dave: don't forget you are going to the mall tonight" or "Don't forget your tux fitting at 1 PM." Do not write outside-narrator or addressee-label bodies like "Dave wants to remind Lisa...", "Dave's message for Lisa...", "Message from Dave for Lisa...", or "Lisa should...". Because SMS delivery is handled asynchronously by the notification worker, tell the participant the message was queued or should be on its way shortly; do not claim final delivery unless the tool result actually reports delivery. In a sum with more than two participants, Mem·Sum adds the sum's display name to the From envelope automatically; when composing attention notificationText for such a sum, name the sum in the text so recipients know which shared workspace the notice concerns.
 
@@ -33,6 +34,7 @@ export const hostedRecommendedWorkflow = [
   "Publish related graph changes together with commit_update_batch and expected versions.",
   "For +sum wiki updates, include notificationText only with explicit attentionParticipantIds.",
   "For reminders, call create_reminder only after commit_interaction has stored an explicit reminder or scheduled-notification request; never use create_reminder for an immediate tell/send/message request.",
+  "Remove a page only on the participant's clear direction: wikiDeletes in commit_update_batch, carrying forward surviving facts and index links in the same batch, with displayText naming what was removed and why.",
   "If commit_update_batch reports stale changedPaths, reread those pages, revise, and retry once with a coherent batch."
 ] as const;
 
@@ -47,6 +49,7 @@ export const hostedResolvedContactWorkflow = [
   "Publish all related changes through one commit_update_batch using the versions you just read.",
   "For +sum wiki updates, include notificationText only with explicit attentionParticipantIds.",
   "For reminders, call create_reminder after the source interaction exists only for explicit reminder or scheduled-notification requests; never use create_reminder for an immediate tell/send/message request.",
+  "Remove a page only on the participant's clear direction: wikiDeletes in commit_update_batch, carrying forward surviving facts and index links in the same batch, with displayText naming what was removed and why.",
   "On stale rejection, reread the changed paths, revise the private draft, and retry."
 ] as const;
 
