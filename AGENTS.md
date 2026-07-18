@@ -50,6 +50,12 @@ drift tests — the tool catalog to the tool registry, pricing numbers to the li
 the privacy processor roster to the page — so page, code, and test change together in one
 commit or the suite fails.
 
+The member-facing Companion (dashboard route `/companion`) is documented in
+`docs/companion.md` (surface doctrine, read-only guardrails) and
+`docs/companion-pwa-install.md` (the proven installable-PWA configuration and its diagnosis
+method — consult it before touching manifests, icons, or install metadata on any Sum-family
+companion surface).
+
 ## Vocabulary
 
 - `+sum` means add, save, update, ask about, or retrieve shared relationship memory.

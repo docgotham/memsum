@@ -6,9 +6,10 @@ companion surface and carries its guardrails:
 
 - **Plain URL.** `/companion` works in any browser window, as the header
   pop-out (`window.open`, 440×900), or installed as a standalone PWA that
-  snaps to the same slender shape. No host-ecosystem coupling — deliberately
-  not a Claude artifact. It is the dashboard, kept open — not a place to
-  live in.
+  snaps to the same slender shape (the full install configuration and its
+  diagnosis method live in `docs/companion-pwa-install.md`). No
+  host-ecosystem coupling — deliberately not a Claude artifact. It is the
+  dashboard, kept open — not a place to live in.
 - **Instruments, not dialogue.** The companion prepares speech and never
   delivers it. Chips copy ready-to-paste invocations — an `@handle` chip
   copies `+dm @handle `, the `#sum-handle` chip copies `#handle ` — and the

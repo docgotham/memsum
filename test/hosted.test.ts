@@ -2975,12 +2975,29 @@ describe("Mem·Sum companion", () => {
     expect(manifest.scope).toBe("/companion");
     expect(manifest.icons.map((i: { sizes: string }) => i.sizes).sort()).toEqual(["192x192", "512x512"]);
     for (const icon of manifest.icons) {
-      const stat = await fs.stat(path.join(process.cwd(), "dashboard", "public", icon.src.replace(/^\//, "")));
-      expect(stat.size).toBeGreaterThan(0);
+      // "any maskable" and the standard mobile-web-app-capable meta were the
+      // only deltas between this deployment (Android Chrome offered install,
+      // 2026-07-18) and a sibling companion it refused — see
+      // docs/companion-pwa-install.md. Declared icon sizes must also be the
+      // real PNG dimensions (IHDR), not aspirations.
+      expect(icon.purpose).toBe("any maskable");
+      const png = await fs.readFile(path.join(process.cwd(), "dashboard", "public", icon.src.replace(/^\//, "")));
+      expect(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`).toBe(icon.sizes);
     }
 
     const layout = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "layout.tsx"), "utf8");
     expect(layout).toContain('manifest: "/companion.webmanifest"');
+    expect(layout).toContain("appleWebApp: { capable: true");
+
+    // The install recipe doc and the shipped configuration move in one
+    // commit: its load-bearing claims are the same strings pinned above.
+    const recipe = await fs.readFile(path.join(process.cwd(), "docs", "companion-pwa-install.md"), "utf8");
+    expect(recipe).toContain('"purpose": "any maskable"');
+    expect(recipe).toContain("mobile-web-app-capable");
+    expect(recipe).toContain("window.resizeTo(440, 900)");
+    expect(recipe).toContain("No service worker is required");
+    const companionDoc = await fs.readFile(path.join(process.cwd(), "docs", "companion.md"), "utf8");
+    expect(companionDoc).toContain("companion-pwa-install.md");
 
     // The installed app snaps to the slender instrument-panel width, but only
     // in standalone mode — never in a browser tab or the header pop-out.
