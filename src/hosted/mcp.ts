@@ -161,7 +161,7 @@ function createHostedMcpServer(): McpServer {
     {
       title: "Resolve contact",
       description:
-        "Resolve an owner-scoped @contact handle returned by relationship context tools or supplied by the participant into the relationship and participant values needed for follow-up hosted graph operations.",
+        "Resolve an owner-scoped @contact handle returned by relationship context tools or supplied by the participant into the relationship and participant values needed for follow-up hosted graph operations. The result's person.sums lists every sum shared with that person (identity-exact once they have linked an account) — answer person-scoped questions like 'all my sums with @lisa' from that list.",
       inputSchema: resolveContactSchema,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false }
     },

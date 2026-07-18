@@ -398,6 +398,60 @@ export function buildUpdateBatchRejectionRecord(
   };
 }
 
+// Handle → identity → seats: an @handle names a person in the owner's
+// address book, and the person's sums are every sum the caller shares with
+// the linked account behind the contact's participant. An unlinked
+// placeholder resolves to the handle's own sum only — the kernel asserts
+// identity it can prove, never display-name similarity; judgment about
+// same-named placeholders belongs to agents. Sum handles dedupe over the
+// caller's full membership list in created_at order, the same order every
+// other listing uses.
+export function buildContactPersonSums(input: {
+  contactRelationshipId: string;
+  contactParticipant: { id: string; user_id: string | null; display_name: string | null };
+  memberships: Array<{ relationship_id: string; displayName: string }>;
+  personParticipants: Array<{ id: string; relationship_id: string; display_name: string | null }>;
+}): {
+  linked: boolean;
+  sums: Array<{
+    relationshipId: string;
+    displayName: string;
+    sumHandle: string;
+    participantId: string;
+    participantDisplayName: string | null;
+  }>;
+} {
+  const sumHandles = assignSumHandles(input.memberships.map((membership) => membership.displayName));
+  const handleByRelationship = new Map(input.memberships.map((membership, index) => [membership.relationship_id, sumHandles[index]]));
+  const nameByRelationship = new Map(input.memberships.map((membership) => [membership.relationship_id, membership.displayName]));
+  const orderByRelationship = new Map(input.memberships.map((membership, index) => [membership.relationship_id, index]));
+
+  const linked = Boolean(input.contactParticipant.user_id);
+  const seats = linked
+    ? [...input.personParticipants]
+    : [
+        {
+          id: input.contactParticipant.id,
+          relationship_id: input.contactRelationshipId,
+          display_name: input.contactParticipant.display_name
+        }
+      ];
+  seats.sort((a, b) => (orderByRelationship.get(a.relationship_id) ?? 0) - (orderByRelationship.get(b.relationship_id) ?? 0));
+
+  return {
+    linked,
+    sums: seats
+      .filter((seat) => nameByRelationship.has(seat.relationship_id))
+      .map((seat) => ({
+        relationshipId: seat.relationship_id,
+        displayName: nameByRelationship.get(seat.relationship_id)!,
+        sumHandle: handleByRelationship.get(seat.relationship_id)!,
+        participantId: seat.id,
+        participantDisplayName: seat.display_name
+      }))
+  };
+}
+
 class SupabaseHostedKernel {
   private userPromise: Promise<CurrentUser> | undefined;
 
@@ -740,6 +794,53 @@ class SupabaseHostedKernel {
 
     if (membershipError) throw storageError(membershipError);
 
+    // Handle → identity → seats (the family model, mirrored from Suminar):
+    // the @handle points at a person, and the person's sums are every sum
+    // the caller shares with that person's linked account. The queries stay
+    // explicitly caller-scoped because this client may hold service role.
+    const { data: contactParticipant, error: contactParticipantError } = await this.client
+      .from("participants")
+      .select("id, user_id, display_name")
+      .eq("id", contact.participant_id)
+      .maybeSingle();
+
+    if (contactParticipantError) throw storageError(contactParticipantError);
+
+    const { data: myMemberships, error: myMembershipsError } = await this.client
+      .from("relationship_members")
+      .select("relationship_id, relationships!inner(display_name)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
+
+    if (myMembershipsError) throw storageError(myMembershipsError);
+
+    const memberships = (myMemberships ?? []).map((row: any) => ({
+      relationship_id: row.relationship_id,
+      displayName: row.relationships.display_name
+    }));
+
+    let personParticipants: Array<{ id: string; relationship_id: string; display_name: string | null }> = [];
+    if (contactParticipant?.user_id) {
+      const { data: seatRows, error: seatError } = await this.client
+        .from("participants")
+        .select("id, relationship_id, display_name")
+        .eq("user_id", contactParticipant.user_id)
+        .in(
+          "relationship_id",
+          memberships.map((m) => m.relationship_id)
+        );
+
+      if (seatError) throw storageError(seatError);
+      personParticipants = seatRows ?? [];
+    }
+
+    const person = buildContactPersonSums({
+      contactRelationshipId: contact.relationship_id,
+      contactParticipant: contactParticipant ?? { id: contact.participant_id, user_id: null, display_name: contact.display_name },
+      memberships,
+      personParticipants
+    });
+
     return {
       contact: {
         handle: contact.handle,
@@ -757,7 +858,8 @@ class SupabaseHostedKernel {
         userId: (membership as any).participants.user_id,
         displayName: (membership as any).participants.display_name
       },
-      role: (membership as any).role
+      role: (membership as any).role,
+      person
     };
   }
 

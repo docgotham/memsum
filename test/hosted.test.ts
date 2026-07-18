@@ -51,6 +51,7 @@ import {
 } from "../src/hosted/ratelimit.js";
 import {
   assignSumHandles,
+  buildContactPersonSums,
   buildUpdateBatchRejectionRecord,
   createSupabaseHostedKernelHandler,
   formatActivityDisplayTime,
@@ -1361,6 +1362,56 @@ describe("Mem·Sum hosted Supabase schema", () => {
     expect(hostedMcpInstructions).toMatch(/even without a \+ prefix/);
     expect(hostedMcpInstructions).toMatch(/🥟 is Mem·Sum's brand mark/);
     expect(hostedMcpInstructions).toMatch(/never replaces plain words/);
+  });
+
+  it("resolves an @handle through its person: every shared sum, identity-exact", async () => {
+    // The family model (mirrored from Suminar): handle → identity → seats.
+    // A linked person's sums are every sum the caller shares with that
+    // account, in the caller's membership order with the caller's #handles.
+    const memberships = [
+      { relationship_id: "r1", displayName: "Dave-Lisa" },
+      { relationship_id: "r2", displayName: "Wedding Plans" },
+      { relationship_id: "r3", displayName: "Dave-Mike" }
+    ];
+    const linked = buildContactPersonSums({
+      contactRelationshipId: "r1",
+      contactParticipant: { id: "p-lisa-1", user_id: "user-lisa", display_name: "Lisa" },
+      memberships,
+      personParticipants: [
+        { id: "p-lisa-2", relationship_id: "r2", display_name: "Lisa G" },
+        { id: "p-lisa-1", relationship_id: "r1", display_name: "Lisa" }
+      ]
+    });
+    expect(linked.linked).toBe(true);
+    expect(linked.sums.map((sum) => sum.sumHandle)).toEqual(["#dave-lisa", "#wedding-plans"]);
+    expect(linked.sums.map((sum) => sum.participantDisplayName)).toEqual(["Lisa", "Lisa G"]);
+
+    // An unlinked placeholder resolves to the handle's home sum only: the
+    // kernel asserts identity it can prove, never display-name similarity.
+    const unlinked = buildContactPersonSums({
+      contactRelationshipId: "r1",
+      contactParticipant: { id: "p-lisa-1", user_id: null, display_name: "Lisa" },
+      memberships,
+      personParticipants: []
+    });
+    expect(unlinked.linked).toBe(false);
+    expect(unlinked.sums.map((sum) => sum.sumHandle)).toEqual(["#dave-lisa"]);
+
+    // The contract teaches person-scoped resolution, and the tool says it.
+    expect(hostedMcpInstructions).toMatch(/An @handle names a person, not a single sum/);
+    expect(hostedMcpInstructions).toMatch(/never from the handle's home sum alone/);
+    const mcpSource = await fs.readFile(path.join(process.cwd(), "src", "hosted", "mcp.ts"), "utf8");
+    expect(mcpSource).toMatch(/person\.sums lists every sum shared with that person/);
+
+    // A duplicate @handle at creation is a relayable guard, not a raw
+    // unique-violation 500 — both create functions wrap the contact insert.
+    const guard = await fs.readFile(
+      path.join(process.cwd(), "supabase", "migrations", "20260718230000_contact_handle_taken_guard.sql"),
+      "utf8"
+    );
+    expect(guard.match(/exception when unique_violation then/g)).toHaveLength(2);
+    expect(guard.match(/is already in your address book/g)).toHaveLength(2);
+    expect(guard).not.toMatch(/create table|alter table/i);
   });
 
   it("derives #sum-handles as labels that select a place deterministically", () => {

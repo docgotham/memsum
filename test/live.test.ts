@@ -248,6 +248,70 @@ describeLive("Mem·Sum live graph (§16 harness)", () => {
     });
   }, 30000);
 
+  it("resolves a person across sums by linked account, and refuses a duplicate @handle kindly", async () => {
+    await inRollback(async () => {
+      // One owner, two sums that both contain Lisa: the first bound to the
+      // @lisa contact, the second created without a handle (the guard's own
+      // guidance for a second sum with the same person).
+      const dave = await seedUserWithRelationship({
+        displayName: "HarnessDave",
+        relationshipName: "Dave-Lisa Live",
+        peerDisplayName: "Lisa",
+        contactHandle: "@lisa"
+      });
+      const second = await q(
+        `select public.create_relationship_context_for_user('${sqlJson({
+          relationshipDisplayName: "Wedding Plans Live",
+          selfDisplayName: "HarnessDave",
+          peerDisplayName: "Lisa"
+        })}'::jsonb, '${dave.userId}') as r;`
+      );
+      const secondRelationshipId = second.rows[0].r.relationshipId;
+
+      // Lisa claims both seats with one account — the durable identity.
+      const lisaUserId = randomUUID();
+      await q(`insert into auth.users (id, email) values ('${lisaUserId}', 'live-test-${randomUUID()}@example.com');`);
+      await q(
+        `update public.participants set user_id = '${lisaUserId}'
+         where relationship_id in ('${dave.relationshipId}', '${secondRelationshipId}') and user_id is null;`
+      );
+
+      // The resolve_contact person query: seats of the linked account within
+      // the caller's memberships — both sums, not just the handle's home.
+      const seats = await q(
+        `select count(*)::int as seats from public.participants p
+         where p.user_id = '${lisaUserId}'
+           and p.relationship_id in (
+             select rm.relationship_id from public.relationship_members rm where rm.user_id = '${dave.userId}'
+           );`
+      );
+      expect(seats.rows[0].seats).toBe(2);
+
+      // The @lisa contact stays a single address-book row bound to its home
+      // sum; person scope comes from identity, not from duplicating rows.
+      const contactRows = await q(
+        `select count(*)::int as contacts from public.contacts
+         where owner_user_id = '${dave.userId}' and handle = '@lisa';`
+      );
+      expect(contactRows.rows[0].contacts).toBe(1);
+
+      // Reusing the handle on a third sum is a relayable guard, not a raw
+      // unique-violation 500.
+      await q("savepoint probe");
+      await expect(
+        q(
+          `select public.create_relationship_context_for_user('${sqlJson({
+            relationshipDisplayName: "Duplicate Handle Sum",
+            selfDisplayName: "HarnessDave",
+            peerDisplayName: "Lisa",
+            contactHandle: "@lisa"
+          })}'::jsonb, '${dave.userId}');`
+        )
+      ).rejects.toThrow(/@lisa is already in your address book/);
+      await q("rollback to savepoint probe");
+    });
+  }, 30000);
+
   it("isolates accounts under RLS: relationships, pages, and contacts are invisible across owners", async () => {
     await inRollback(async () => {
       const a = await seedUserWithRelationship({
