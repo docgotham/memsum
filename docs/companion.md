@@ -12,9 +12,11 @@ companion surface and carries its guardrails:
   dashboard, kept open — not a place to live in.
 - **Instruments, not dialogue.** The companion prepares speech and never
   delivers it. Chips copy ready-to-paste invocations — an `@handle` chip
-  copies `+dm @handle `, the `#sum-handle` chip copies `#handle ` — and the
-  member finishes the sentence in their own chat, where their own agent
-  performs the act. **Quick-send was considered and dropped (Dave,
+  copies `+dm @handle `, the `#sum-handle` chip copies `#handle `, and each
+  wiki row's `[[ ]]` chip copies `[[Page Title]] `, the graph's own
+  wiki-link notation (the family grammar in one line: @ names who, # names
+  where, [[...]] names what) — and the member finishes the sentence in
+  their own chat, where their own agent performs the act. **Quick-send was considered and dropped (Dave,
   2026-07-18)**: a send surface would recreate a second chat and bypass the
   agent judgment the whole product routes through. A drift test pins the
   absence of forms and textareas.

@@ -487,14 +487,25 @@ export default function CompanionPage() {
                 {pages !== null && pages.length > 0 ? (
                   <ul className="flex flex-col">
                     {pages.map((page) => (
-                      <li key={page.id}>
+                      <li className="flex items-baseline gap-1" key={page.id}>
                         <button
-                          className="flex w-full items-baseline justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                          className="flex min-w-0 flex-1 items-baseline justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10"
                           onClick={() => openInPanel(page.path)}
                           type="button"
                         >
                           <span className="truncate">{page.title}</span>
                           <span className="shrink-0 text-xs opacity-40">{page.path.replace(/^wiki\//, "").replace(/\.md$/, "")}</span>
+                        </button>
+                        {/* The third instrument: @ names who, # names where, [[...]]
+                            names what. Copies the page citation in the graph's own
+                            wiki-link notation — title verbatim, no slug to derive. */}
+                        <button
+                          className="shrink-0 rounded-md px-1.5 py-1.5 font-mono text-xs opacity-40 transition-opacity hover:opacity-100"
+                          onClick={() => copy(`page:${page.path}`, `[[${page.title}]] `)}
+                          title={`Copy [[${page.title}]] — cites this page in any chat`}
+                          type="button"
+                        >
+                          {copiedKey === `page:${page.path}` ? "Copied" : "[[ ]]"}
                         </button>
                       </li>
                     ))}

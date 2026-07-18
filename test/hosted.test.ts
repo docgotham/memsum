@@ -3046,6 +3046,15 @@ describe("Mem·Sum companion", () => {
     expect(companionDoc).toMatch(/exactly two standing\s+surfaces/);
     expect(companionDoc).toMatch(/transient,\s+singular, and user-invoked/);
 
+    // The third instrument (2026-07-18): each wiki row copies the page
+    // citation in the graph's own wiki-link notation. Title travels
+    // verbatim — no slug algorithm, no mirror to keep in lockstep. The
+    // family grammar: @ names who, # names where, [[...]] names what.
+    expect(companion).toContain("copy(`page:${page.path}`, `[[${page.title}]] `)");
+    expect(hostedMcpInstructions).toMatch(/\[\[Double brackets\]\] cite a wiki page/);
+    expect(hostedMcpInstructions).toMatch(/@ names who, # names where, \[\[\.\.\.\]\] names what/);
+    expect(companionDoc).toMatch(/\[\[Page Title\]\]/);
+
     // The launch entry point lives in the persistent header (mirroring
     // Suminar): a Companion link plus a pop-out icon, revealed when signed in,
     // reachable from every page rather than buried on one.
