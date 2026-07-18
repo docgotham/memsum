@@ -3047,13 +3047,17 @@ describe("Mem·Sum companion", () => {
     expect(companionDoc).toMatch(/transient,\s+singular, and user-invoked/);
 
     // The third instrument (2026-07-18): each wiki row copies the page
-    // citation in the graph's own wiki-link notation. Title travels
-    // verbatim — no slug algorithm, no mirror to keep in lockstep. The
+    // citation in the graph's own wiki-link notation, fully qualified with
+    // its sum — [[Our Cats]] #dave-lisa — so same-titled pages in different
+    // sums stay unambiguous. Title travels verbatim, sum trails the title
+    // (a leading #handle could misread as an act against the sum). The
     // family grammar: @ names who, # names where, [[...]] names what.
-    expect(companion).toContain("copy(`page:${page.path}`, `[[${page.title}]] `)");
+    expect(companion).toContain('const pageCitation = (title: string) => `[[${title}]]${selectedHandle ? ` ${selectedHandle}` : ""} `;');
+    expect(companion).toContain("copy(`page:${page.path}`, pageCitation(page.title))");
     expect(hostedMcpInstructions).toMatch(/\[\[Double brackets\]\] cite a wiki page/);
+    expect(hostedMcpInstructions).toMatch(/travels fully qualified, as \[\[Our Cats\]\] #dave-lisa/);
     expect(hostedMcpInstructions).toMatch(/@ names who, # names where, \[\[\.\.\.\]\] names what/);
-    expect(companionDoc).toMatch(/\[\[Page Title\]\]/);
+    expect(companionDoc).toMatch(/\[\[Page Title\]\] #sum-handle/);
 
     // The launch entry point lives in the persistent header (mirroring
     // Suminar): a Companion link plus a pop-out icon, revealed when signed in,

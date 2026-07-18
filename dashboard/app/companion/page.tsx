@@ -285,6 +285,13 @@ export default function CompanionPage() {
   const chip =
     "inline-flex items-center gap-1 rounded-full border border-black/20 px-3 py-1 text-sm transition-colors hover:border-black/50 dark:border-white/25 dark:hover:border-white/60";
 
+  // A page citation travels fully qualified: [[Title]] #sum-handle. The chip
+  // knows which sum it came from, so the paste stays unambiguous even when
+  // two sums hold same-titled pages. Sum trails the title deliberately —
+  // "delete [[Our Cats]] #dave-lisa" keeps the verb's object unambiguous,
+  // where a leading #handle could read as an act against the sum itself.
+  const pageCitation = (title: string) => `[[${title}]]${selectedHandle ? ` ${selectedHandle}` : ""} `;
+
   function sumRow(m: MembershipRow) {
     const handle = handleByRelationship.get(m.relationship_id);
     return (
@@ -501,8 +508,8 @@ export default function CompanionPage() {
                             wiki-link notation — title verbatim, no slug to derive. */}
                         <button
                           className="shrink-0 rounded-md px-1.5 py-1.5 font-mono text-xs opacity-40 transition-opacity hover:opacity-100"
-                          onClick={() => copy(`page:${page.path}`, `[[${page.title}]] `)}
-                          title={`Copy [[${page.title}]] — cites this page in any chat`}
+                          onClick={() => copy(`page:${page.path}`, pageCitation(page.title))}
+                          title={`Copy ${pageCitation(page.title).trim()} — cites this page in any chat`}
                           type="button"
                         >
                           {copiedKey === `page:${page.path}` ? "Copied" : "[[ ]]"}
