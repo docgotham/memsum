@@ -122,19 +122,9 @@ export default function SumsPage() {
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-16">
       <div className="flex items-baseline justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Your sums</h1>
-        <div className="flex items-baseline gap-4">
-          <button
-            className="text-sm underline opacity-70 hover:opacity-100"
-            onClick={() => window.open("/companion", "memsum-companion", "width=400,height=860,resizable=yes")}
-            title="A slender window to keep beside your AI — instruments, not dialogue"
-            type="button"
-          >
-            Companion ↗
-          </button>
-          <Link className="text-sm underline opacity-70" href="/">
-            Mem·Sum
-          </Link>
-        </div>
+        <Link className="text-sm underline opacity-70" href="/">
+          Mem·Sum
+        </Link>
       </div>
 
       {error ? (

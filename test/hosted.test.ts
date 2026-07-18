@@ -2928,8 +2928,12 @@ describe("Mem·Sum companion", () => {
     expect(companion).toContain('target="_blank"');
     expect(companion).toContain("Read-only instruments");
 
-    const sums = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "sums", "page.tsx"), "utf8");
-    expect(sums).toContain('window.open("/companion"');
+    // The launch entry point lives in the persistent header (mirroring
+    // Suminar): a Companion link plus a pop-out icon, revealed when signed in,
+    // reachable from every page rather than buried on one.
+    const header = await fs.readFile(path.join(process.cwd(), "dashboard", "components", "site-header.tsx"), "utf8");
+    expect(header).toContain('href="/companion"');
+    expect(header).toContain('window.open("/companion"');
 
     const wikiLib = await fs.readFile(path.join(process.cwd(), "dashboard", "lib", "wiki.ts"), "utf8");
     // Stored content must never execute, and unexpanded provenance tokens
