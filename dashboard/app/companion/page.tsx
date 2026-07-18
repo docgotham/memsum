@@ -103,6 +103,23 @@ export default function CompanionPage() {
     setReady(true);
   }, []);
 
+  // Launched as an installed standalone app, Chrome opens at a default window
+  // size rather than the slender pop-out shape. Snap it to the instrument-
+  // panel width — being slender beside a chat is the companion's whole
+  // identity. This fires ONLY in the installed app (display-mode: standalone);
+  // a browser tab and the header pop-out (already sized by window.open, and
+  // reported as display-mode: browser) are left untouched. resizeTo is
+  // best-effort — permitted for app windows, quietly ignored where it isn't.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    if (!window.matchMedia("(display-mode: standalone)").matches) return;
+    try {
+      window.resizeTo(440, 900);
+    } catch {
+      /* app-window resize refused; leave the window as launched */
+    }
+  }, []);
+
   // Refresh on focus and every 60s while visible — enough for the live strip
   // to track reality without a standing firehose.
   useEffect(() => {

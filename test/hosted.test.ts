@@ -2970,6 +2970,12 @@ describe("Mem·Sum companion", () => {
     const layout = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "layout.tsx"), "utf8");
     expect(layout).toContain('manifest: "/companion.webmanifest"');
 
+    // The installed app snaps to the slender instrument-panel width, but only
+    // in standalone mode — never in a browser tab or the header pop-out.
+    const companionSrc = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "page.tsx"), "utf8");
+    expect(companionSrc).toContain('matchMedia("(display-mode: standalone)")');
+    expect(companionSrc).toContain("window.resizeTo(440, 900)");
+
     // The installed app and the pop-out are pure instrument panel: the site
     // header and footer stand down on /companion.
     const headerSrc = await fs.readFile(path.join(process.cwd(), "dashboard", "components", "site-header.tsx"), "utf8");
