@@ -2950,4 +2950,31 @@ describe("Mem·Sum companion", () => {
     expect(view).toContain("Download .md");
     expect(view).not.toMatch(/<textarea|contentEditable/);
   });
+
+  it("is installable as a standalone app and wears no site chrome", async () => {
+    // The PWA manifest is what gives Chrome its "install / open in app"
+    // affordance — display standalone, scoped to /companion so installing
+    // anywhere installs the companion and not the whole dashboard.
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(process.cwd(), "dashboard", "public", "companion.webmanifest"), "utf8")
+    );
+    expect(manifest.display).toBe("standalone");
+    expect(manifest.start_url).toBe("/companion");
+    expect(manifest.scope).toBe("/companion");
+    expect(manifest.icons.map((i: { sizes: string }) => i.sizes).sort()).toEqual(["192x192", "512x512"]);
+    for (const icon of manifest.icons) {
+      const stat = await fs.stat(path.join(process.cwd(), "dashboard", "public", icon.src.replace(/^\//, "")));
+      expect(stat.size).toBeGreaterThan(0);
+    }
+
+    const layout = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "companion", "layout.tsx"), "utf8");
+    expect(layout).toContain('manifest: "/companion.webmanifest"');
+
+    // The installed app and the pop-out are pure instrument panel: the site
+    // header and footer stand down on /companion.
+    const headerSrc = await fs.readFile(path.join(process.cwd(), "dashboard", "components", "site-header.tsx"), "utf8");
+    const footerSrc = await fs.readFile(path.join(process.cwd(), "dashboard", "components", "site-footer.tsx"), "utf8");
+    expect(headerSrc).toContain('pathname?.startsWith("/companion")');
+    expect(footerSrc).toContain('pathname?.startsWith("/companion")');
+  });
 });

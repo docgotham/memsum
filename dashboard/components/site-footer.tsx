@@ -1,7 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { DumplingMark } from "@/components/brand";
 
 export function SiteFooter() {
+  const pathname = usePathname();
+  // The companion is a bare instrument panel — no site footer, in a browser
+  // tab or installed as a standalone app.
+  if (pathname?.startsWith("/companion")) return null;
   return (
     <footer className="mt-auto border-t border-black/10 dark:border-white/15">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-6 py-8 text-sm">

@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Lockup } from "@/components/brand";
 import { supabaseBrowser } from "@/lib/supabase";
 
 // The shared top bar: every page carries the lockup home-link and the same
 // short nav, so no page is an island. Session state only decides the last
-// slot — Your sums for members, Sign in for everyone else.
+// slot — Your sums for members, Sign in for everyone else. The one exception
+// is /companion: it is a slender instrument panel (and an installable
+// standalone app), so it wears no site chrome.
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -23,6 +27,8 @@ export function SiteHeader() {
     );
     return () => subscription.subscription.unsubscribe();
   }, []);
+
+  if (pathname?.startsWith("/companion")) return null;
 
   return (
     <header className="border-b border-black/10 dark:border-white/15">
