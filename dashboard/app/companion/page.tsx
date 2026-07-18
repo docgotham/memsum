@@ -410,6 +410,20 @@ export default function CompanionPage() {
               {pageRow ? (
                 <>
                   <h2 className="text-base font-semibold tracking-tight">{pageRow.title}</h2>
+                  {/* The self-labeling exemplar: the full citation as a real
+                      chip, in the one place with room for it. The index rows
+                      compress to [[ ]]; seeing this once is what makes that
+                      compression legible. */}
+                  <div>
+                    <button
+                      className={chip}
+                      onClick={() => copy(`page:${pageRow.path}`, pageCitation(pageRow.title))}
+                      title={`Copy ${pageCitation(pageRow.title).trim()} — cites this page in any chat`}
+                      type="button"
+                    >
+                      {copiedKey === `page:${pageRow.path}` ? "Copied" : pageCitation(pageRow.title).trim()}
+                    </button>
+                  </div>
                   <article
                     className="wiki-content wiki-compact"
                     // Safe by construction: renderWikiHtml runs markdown-it with
@@ -507,7 +521,7 @@ export default function CompanionPage() {
                             names what. Copies the page citation in the graph's own
                             wiki-link notation — title verbatim, no slug to derive. */}
                         <button
-                          className="shrink-0 rounded-md px-1.5 py-1.5 font-mono text-xs opacity-40 transition-opacity hover:opacity-100"
+                          className="shrink-0 rounded-full border border-black/20 px-2 py-0.5 font-mono text-xs opacity-70 transition-colors hover:border-black/50 hover:opacity-100 dark:border-white/25 dark:hover:border-white/60"
                           onClick={() => copy(`page:${page.path}`, pageCitation(page.title))}
                           title={`Copy ${pageCitation(page.title).trim()} — cites this page in any chat`}
                           type="button"
@@ -521,7 +535,8 @@ export default function CompanionPage() {
               </section>
 
               <p className="border-t border-black/10 pt-3 text-xs opacity-50 dark:border-white/15">
-                Read-only instruments. Your agent does the writing — copy a chip and speak in your own chat.
+                Read-only instruments. Your agent does the writing — copy a chip and speak in your own chat. # names the
+                sum, @ a member, [[ ]] a page.
               </p>
             </div>
           ) : null}

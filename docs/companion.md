@@ -19,7 +19,12 @@ companion surface and carries its guardrails:
   family grammar in one line: @ names who, # names where, [[...]] names
   what; the sum trails the title so a verb's object is never misread as the
   sum itself) — and the member finishes the sentence in their own chat,
-  where their own agent performs the act. **Quick-send was considered and dropped (Dave,
+  where their own agent performs the act. The affordance pattern: compress
+  in the list (index rows wear a bordered `[[ ]]` pill), exemplify in the
+  detail (the open page carries the full self-labeling chip), legend where
+  chips are already taught (the footer's "# names the sum, @ a member,
+  [[ ]] a page") — progressive disclosure that never depends on hover,
+  because touch is a first-class surface. **Quick-send was considered and dropped (Dave,
   2026-07-18)**: a send surface would recreate a second chat and bypass the
   agent judgment the whole product routes through. A drift test pins the
   absence of forms and textareas.

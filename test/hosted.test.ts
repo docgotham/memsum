@@ -3054,6 +3054,12 @@ describe("Mem·Sum companion", () => {
     // family grammar: @ names who, # names where, [[...]] names what.
     expect(companion).toContain('const pageCitation = (title: string) => `[[${title}]]${selectedHandle ? ` ${selectedHandle}` : ""} `;');
     expect(companion).toContain("copy(`page:${page.path}`, pageCitation(page.title))");
+    // The affordance pattern: compress in the list, exemplify in the detail,
+    // legend where chips are already taught. The open page carries the full
+    // self-labeling chip; the footer teaches the grammar without hover.
+    expect(companion).toContain("copy(`page:${pageRow.path}`, pageCitation(pageRow.title))");
+    expect(companion).toMatch(/# names the\s+sum, @ a member, \[\[ \]\] a page/);
+    expect(companionDoc).toMatch(/compress\s+in the list/);
     expect(hostedMcpInstructions).toMatch(/\[\[Double brackets\]\] cite a wiki page/);
     expect(hostedMcpInstructions).toMatch(/travels fully qualified, as \[\[Our Cats\]\] #dave-lisa/);
     expect(hostedMcpInstructions).toMatch(/@ names who, # names where, \[\[\.\.\.\]\] names what/);
