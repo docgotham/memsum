@@ -6,11 +6,18 @@
 // delivers it: no send surface exists here, by decision (2026-07-18), and the
 // wiki stays read-only because agents own the writing. Works in any browser
 // window; deliberately not coupled to any host ecosystem.
+//
+// Surface doctrine (2026-07-18): the family asks a user to manage exactly two
+// standing surfaces — their chat and the Companion. Everything deeper is
+// transient, singular, and user-invoked. So wiki pages read in the panel at
+// slender width (master-detail), and full size is an explicit escalation into
+// ONE named reader window ("memsum-reader") that every escalation reuses —
+// the third window never multiplies.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { assignSumHandles } from "@/lib/handles";
-import { wikiPageHref } from "@/lib/wiki";
+import { renderWikiHtml, storedPathCandidates, wikiPageHref, type WikiPageRow } from "@/lib/wiki";
 import { supabaseBrowser } from "@/lib/supabase";
 
 interface ParticipantRow {
@@ -43,6 +50,7 @@ interface WikiIndexRow {
 }
 
 const LIVE_WINDOW_MS = 3 * 60 * 1000;
+const READER_WINDOW = "memsum-reader";
 
 export default function CompanionPage() {
   const [ready, setReady] = useState(false);
@@ -56,8 +64,28 @@ export default function CompanionPage() {
   const [filter, setFilter] = useState("");
   const [pages, setPages] = useState<WikiIndexRow[] | null>(null);
   const [pagesError, setPagesError] = useState<string | null>(null);
+  const [openTarget, setOpenTarget] = useState<string[] | null>(null);
+  const [pageRow, setPageRow] = useState<WikiPageRow | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const copiedTimer = useRef<number | null>(null);
+
+  // Launched as an installed standalone app, Chrome opens at a default window
+  // size rather than the slender pop-out shape. Snap it to the instrument-
+  // panel width — being slender beside a chat is the companion's whole
+  // identity. This fires ONLY in the installed app (display-mode: standalone);
+  // a browser tab and the header pop-out (already sized by window.open, and
+  // reported as display-mode: browser) are left untouched. resizeTo is
+  // best-effort — permitted for app windows, quietly ignored where it isn't.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    if (!window.matchMedia("(display-mode: standalone)").matches) return;
+    try {
+      window.resizeTo(440, 900);
+    } catch {
+      /* app-window resize refused; leave the window as launched */
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const supabase = supabaseBrowser();
@@ -103,23 +131,6 @@ export default function CompanionPage() {
     setReady(true);
   }, []);
 
-  // Launched as an installed standalone app, Chrome opens at a default window
-  // size rather than the slender pop-out shape. Snap it to the instrument-
-  // panel width — being slender beside a chat is the companion's whole
-  // identity. This fires ONLY in the installed app (display-mode: standalone);
-  // a browser tab and the header pop-out (already sized by window.open, and
-  // reported as display-mode: browser) are left untouched. resizeTo is
-  // best-effort — permitted for app windows, quietly ignored where it isn't.
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    if (!window.matchMedia("(display-mode: standalone)").matches) return;
-    try {
-      window.resizeTo(440, 900);
-    } catch {
-      /* app-window resize refused; leave the window as launched */
-    }
-  }, []);
-
   // Refresh on focus and every 60s while visible — enough for the live strip
   // to track reality without a standing firehose.
   useEffect(() => {
@@ -152,10 +163,65 @@ export default function CompanionPage() {
     setPages(rows);
   }, []);
 
+  // In-panel page reading (master-detail): openTarget is the page's URL
+  // segments; the same candidates logic as the full viewer resolves them to a
+  // stored path. Refetches on focus so the panel tracks agent writes.
+  const loadPage = useCallback(async () => {
+    if (!selectedId || !openTarget) return;
+    setPageError(null);
+    const { data, error } = await supabaseBrowser()
+      .from("wiki_pages")
+      .select("id, path, title, content, version, updated_at")
+      .eq("relationship_id", selectedId)
+      .in("path", storedPathCandidates(openTarget))
+      .limit(1);
+    if (error) {
+      setPageError("This page could not be loaded.");
+      return;
+    }
+    setPageRow(((data as WikiPageRow[]) ?? [])[0] ?? null);
+  }, [selectedId, openTarget]);
+
+  useEffect(() => {
+    if (!openTarget) return;
+    void loadPage();
+    const onFocus = () => void loadPage();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [openTarget, loadPage]);
+
   function selectSum(relationshipId: string) {
     setSelectedId(relationshipId);
     setTab("sum");
+    setOpenTarget(null);
+    setPageRow(null);
     void loadPages(relationshipId);
+  }
+
+  function openInPanel(storedPath: string) {
+    setPageRow(null);
+    setOpenTarget(storedPath.replace(/^wiki\//, "").split("/").filter(Boolean));
+  }
+
+  function closePanelPage() {
+    setOpenTarget(null);
+    setPageRow(null);
+    setPageError(null);
+  }
+
+  // Wiki-links inside a rendered page keep the reading in the panel: internal
+  // viewer hrefs are intercepted and opened in place; external links keep
+  // their new-tab/noopener behavior from the renderer.
+  function onArticleClick(event: React.MouseEvent<HTMLElement>) {
+    if (!selectedId) return;
+    const anchor = (event.target as HTMLElement).closest?.("a");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href") ?? "";
+    const prefix = `/sums/${selectedId}/wiki/`;
+    if (!href.startsWith(prefix)) return;
+    event.preventDefault();
+    setPageRow(null);
+    setOpenTarget(href.slice(prefix.length).split("/").filter(Boolean).map(decodeURIComponent));
   }
 
   function copy(key: string, text: string) {
@@ -275,6 +341,47 @@ export default function CompanionPage() {
               ) : null}
               {memberships.length === 0 ? <p className="text-sm opacity-60">No sums yet — start one from the dashboard.</p> : null}
             </div>
+          ) : selected && openTarget ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  aria-label={`Back to ${selected.relationships.display_name}`}
+                  className="rounded-md px-2 py-1 text-sm opacity-70 transition-opacity hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+                  onClick={closePanelPage}
+                  type="button"
+                >
+                  ← {selected.relationships.display_name}
+                </button>
+                {pageRow && selectedId ? (
+                  <a
+                    className="shrink-0 text-xs underline opacity-60 hover:opacity-100"
+                    href={wikiPageHref(selectedId, pageRow.path)}
+                    target={READER_WINDOW}
+                    title="Open full size — reuses one reader window rather than piling up tabs"
+                  >
+                    Open full ↗
+                  </a>
+                ) : null}
+              </div>
+              {pageError ? <p className="text-sm text-red-700 dark:text-red-400">{pageError}</p> : null}
+              {!pageRow && !pageError ? <p className="text-sm opacity-60">Loading…</p> : null}
+              {pageRow ? (
+                <>
+                  <h2 className="text-base font-semibold tracking-tight">{pageRow.title}</h2>
+                  <article
+                    className="wiki-content wiki-compact"
+                    // Safe by construction: renderWikiHtml runs markdown-it with
+                    // html disabled — stored content is escaped, never executed.
+                    dangerouslySetInnerHTML={{ __html: renderWikiHtml(pageRow.content, selectedId ?? "") }}
+                    onClick={onArticleClick}
+                  />
+                  <p className="border-t border-black/10 pt-2 text-xs opacity-50 dark:border-white/15">
+                    v{pageRow.version} · {new Date(pageRow.updated_at).toLocaleString()}
+                  </p>
+                </>
+              ) : null}
+              {pageRow === null && !pageError && pages !== null && openTarget ? null : null}
+            </div>
           ) : selected ? (
             <div className="flex flex-col gap-5">
               <section className="flex flex-col gap-2">
@@ -328,7 +435,12 @@ export default function CompanionPage() {
                 <div className="flex items-baseline justify-between">
                   <h2 className="text-xs font-medium uppercase tracking-wide opacity-50">Wiki</h2>
                   {selectedId ? (
-                    <a className="text-xs underline opacity-60" href={`/sums/${selectedId}/wiki`} rel="noopener" target="_blank">
+                    <a
+                      className="text-xs underline opacity-60"
+                      href={`/sums/${selectedId}/wiki`}
+                      target={READER_WINDOW}
+                      title="Open the full index — reuses one reader window"
+                    >
                       Full index ↗
                     </a>
                   ) : null}
@@ -342,15 +454,14 @@ export default function CompanionPage() {
                   <ul className="flex flex-col">
                     {pages.map((page) => (
                       <li key={page.id}>
-                        <a
-                          className="flex items-baseline justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-                          href={selectedId ? wikiPageHref(selectedId, page.path) : "#"}
-                          rel="noopener"
-                          target="_blank"
+                        <button
+                          className="flex w-full items-baseline justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                          onClick={() => openInPanel(page.path)}
+                          type="button"
                         >
                           <span className="truncate">{page.title}</span>
                           <span className="shrink-0 text-xs opacity-40">{page.path.replace(/^wiki\//, "").replace(/\.md$/, "")}</span>
-                        </a>
+                        </button>
                       </li>
                     ))}
                   </ul>

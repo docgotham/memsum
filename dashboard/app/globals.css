@@ -126,6 +126,24 @@ body {
   display: block;
   overflow-x: auto;
 }
+
+/* Compact reading mode for the Companion's in-panel master-detail view:
+   phone-width prose. The fix for narrow columns is typography, not width —
+   slightly smaller type, taller leading, tighter heading scale. */
+.wiki-compact {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+.wiki-compact h1 {
+  font-size: 1.2rem;
+}
+.wiki-compact h2 {
+  font-size: 1.05rem;
+}
+.wiki-compact h3,
+.wiki-compact h4 {
+  font-size: 1rem;
+}
 .wiki-content th,
 .wiki-content td {
   border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);

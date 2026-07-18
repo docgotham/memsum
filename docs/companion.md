@@ -4,10 +4,11 @@ A slender plain-URL window kept beside whichever AI the member is talking to —
 chat on the left, memory on the right. The pattern is borrowed from Suminar's
 companion surface and carries its guardrails:
 
-- **Plain URL.** `/companion` works in any browser window or pop-out
-  (`window.open` from the sums page, ~400×860). No host-ecosystem coupling;
-  deliberately not a Claude artifact or an installable app. It is the
-  dashboard, kept open — not a place to live in.
+- **Plain URL.** `/companion` works in any browser window, as the header
+  pop-out (`window.open`, 440×900), or installed as a standalone PWA that
+  snaps to the same slender shape. No host-ecosystem coupling — deliberately
+  not a Claude artifact. It is the dashboard, kept open — not a place to
+  live in.
 - **Instruments, not dialogue.** The companion prepares speech and never
   delivers it. Chips copy ready-to-paste invocations — an `@handle` chip
   copies `+dm @handle `, the `#sum-handle` chip copies `#handle ` — and the
@@ -48,6 +49,31 @@ fails if they ever diverge.
   under plain labels (plans, people/places/things, preferences, summaries).
 - `/sums/[id]/wiki/[...path]` — the rendered page: title, sum breadcrumb,
   safe markdown body, version/updated footer, Download .md.
+
+## Increment 2.5 — master-detail and the reader window (2026-07-18)
+
+**Surface doctrine:** the family asks a user to manage exactly two standing
+surfaces — their chat and the Companion. Everything deeper is transient,
+singular, and user-invoked.
+
+The three-window tension (chat + companion + full-size page) resolved by
+layering rather than widening:
+
+- **Pages read in the panel.** Clicking an index row renders the page
+  in-panel at slender width (`.wiki-compact` typography — phone-width prose;
+  the fix for narrow columns is type, not width), with a back row to the
+  sum. Wiki-links inside a rendered page are intercepted and followed
+  in-panel; external links keep new-tab + noopener. Content refetches on
+  focus so the panel tracks agent writes.
+- **Full size is an explicit escalation into ONE reused window.** "Open
+  full ↗" (and "Full index ↗") target the named browsing context
+  `memsum-reader`: every escalation reuses the same window, so the third
+  window never multiplies. These same-origin links deliberately omit
+  `noopener` — noopener severs the named-target association that makes
+  reuse work; external links in page content are unaffected.
+- **Widening stays the user's dial, not the design.** Chrome remembers the
+  size an installed PWA is left at; the Companion never grows into a
+  reading app — slender is its identity ("panel, not app").
 
 ## Deferred (increment 3+)
 

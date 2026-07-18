@@ -2928,6 +2928,18 @@ describe("Mem·Sum companion", () => {
     expect(companion).toContain('target="_blank"');
     expect(companion).toContain("Read-only instruments");
 
+    // Surface doctrine (increment 2.5): pages read in the panel at slender
+    // width, and full size escalates into ONE reused named reader window —
+    // the third window never multiplies. The doctrine sentence itself is
+    // pinned in docs/companion.md.
+    expect(companion).toContain('READER_WINDOW = "memsum-reader"');
+    expect(companion).toContain("Open full");
+    expect(companion).toContain("wiki-compact");
+    expect(companion).toContain("onArticleClick");
+    const companionDoc = await fs.readFile(path.join(process.cwd(), "docs", "companion.md"), "utf8");
+    expect(companionDoc).toMatch(/exactly two standing\s+surfaces/);
+    expect(companionDoc).toMatch(/transient,\s+singular, and user-invoked/);
+
     // The launch entry point lives in the persistent header (mirroring
     // Suminar): a Companion link plus a pop-out icon, revealed when signed in,
     // reachable from every page rather than buried on one.
