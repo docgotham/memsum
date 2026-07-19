@@ -3305,3 +3305,97 @@ describe("Mem·Sum companion", () => {
     expect(footerSrc).toContain('pathname?.startsWith("/companion")');
   });
 });
+
+// Connected apps — the family authorization-console convention (constitution,
+// adopted 2026-07-19): one page shows everything that can act as the member,
+// revocation kills credentials but never data, and the claims are pinned here.
+describe("Connected apps", () => {
+  const grantManagementMigrationPath = path.join(
+    process.cwd(),
+    "supabase",
+    "migrations",
+    "20260719160000_oauth_grant_management.sql"
+  );
+
+  it("opens exactly one authenticated window into the OAuth store, scoped to the caller", async () => {
+    const migration = await fs.readFile(grantManagementMigrationPath, "utf8");
+
+    // Both functions are definer-side doors over service-role-only tables…
+    expect(migration).toMatch(/create or replace function public\.list_oauth_grants\(\)/);
+    expect(migration).toMatch(/create or replace function public\.revoke_oauth_client_grants\(target_client_id text\)/);
+    expect(migration.match(/security definer/g)).toHaveLength(2);
+    expect(migration.match(/set search_path = public/g)).toHaveLength(2);
+
+    // …each scoped to auth.uid(); the revoke path refuses anonymous callers.
+    expect(migration).toMatch(/where t\.user_id = auth\.uid\(\)/);
+    expect(migration).toMatch(/v_user_id uuid := auth\.uid\(\)/);
+    expect(migration).toMatch(/requires an authenticated user/);
+
+    // The listing shows only credentials that can still act: unrevoked, with
+    // an unexpired refresh token.
+    expect(migration).toMatch(/t\.revoked_at is null/);
+    expect(migration).toMatch(/t\.refresh_expires_at > now\(\)/);
+
+    // Registration honesty: the self-asserted client name never travels alone —
+    // the registered redirect URIs ride with every grant row.
+    expect(migration).toMatch(/redirect_uris/);
+
+    // No broad access leaks: execute revoked from public, granted only to
+    // authenticated and service_role, and no table grants appear at all.
+    expect(migration).toMatch(/revoke execute on function public\.list_oauth_grants\(\) from public/);
+    expect(migration).toMatch(/revoke execute on function public\.revoke_oauth_client_grants\(text\) from public/);
+    expect(migration).toMatch(/grant execute on function public\.list_oauth_grants\(\) to authenticated/);
+    expect(migration).toMatch(/grant execute on function public\.revoke_oauth_client_grants\(text\) to authenticated/);
+    expect(migration).not.toMatch(/grant (all|select|insert|update|delete) on table/i);
+  });
+
+  it("revokes credentials completely — tokens and the in-flight code window — and nothing else", async () => {
+    const migration = await fs.readFile(grantManagementMigrationPath, "utf8");
+
+    // Revocation invalidates every unrevoked token for the member and client…
+    expect(migration).toMatch(/update public\.oauth_access_tokens\s+set revoked_at = now\(\)/);
+    // …and closes authorization codes minted before the revoke, so a pending
+    // code cannot resurrect access after the member ended it.
+    expect(migration).toMatch(/update public\.oauth_authorization_codes\s+set consumed_at = now\(\)/);
+    expect(migration).toMatch(/consumed_at is null/);
+
+    // "It does not delete your data": the migration touches only the two
+    // credential tables — no other table is written, nothing is deleted.
+    expect(migration).not.toMatch(/\bdelete from\b/i);
+    expect(migration).not.toMatch(/\bdrop\b/i);
+    const touchedTables = [...migration.matchAll(/update public\.(\w+)/g)].map((m) => m[1]);
+    expect([...new Set(touchedTables)].sort()).toEqual(["oauth_access_tokens", "oauth_authorization_codes"]);
+  });
+
+  it("keeps the Connected apps page honest about semantics and anchored on redirect hosts", async () => {
+    const page = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "connections", "page.tsx"), "utf8");
+    const grants = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "connections", "grants.tsx"), "utf8");
+
+    // The semantics sentence, pinned: revoke ends capability, never data.
+    expect(page).toContain("Revoking one immediately invalidates that");
+    expect(page).toContain("It does not delete your account, your sums, or");
+
+    // One page, every account-scoped credential kind: OAuth grants and
+    // connector tokens render together.
+    expect(page).toContain("<OAuthGrants />");
+    expect(page).toContain("<ConnectorTokens />");
+
+    // The page talks to the store only through the two definer functions.
+    expect(grants).toContain('rpc("list_oauth_grants")');
+    expect(grants).toContain('rpc("revoke_oauth_client_grants"');
+
+    // Registration honesty on the surface: rows anchor on the redirect host,
+    // and no token or secret material is ever displayed.
+    expect(grants).toContain("Signs in via");
+    expect(grants).toContain("redirectHosts");
+    expect(grants).not.toMatch(/token_hash|refresh_token/);
+
+    // Unknown grants answered honestly, and revocation asks twice.
+    expect(grants).toContain("That connected app is not available.");
+    expect(grants).toContain("Really revoke?");
+
+    // The credential home links here.
+    const connect = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "connect", "page.tsx"), "utf8");
+    expect(connect).toContain('href="/connections"');
+  });
+});

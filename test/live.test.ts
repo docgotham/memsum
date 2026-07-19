@@ -820,4 +820,76 @@ describeLive("Mem·Sum live graph (§16 harness)", () => {
       expect(secondJobs.rows[0].recipient_participant_id).toBe(dave.peerParticipantId);
     });
   }, 30000);
+
+  it("lists and revokes OAuth grants per member, closing the in-flight code window", async () => {
+    await inRollback(async () => {
+      const dave = await seedUserWithRelationship({ displayName: "GrantDave", relationshipName: "Grant Sum" });
+      const mallory = await seedUserWithRelationship({ displayName: "GrantMallory", relationshipName: "Mallory Sum" });
+
+      // One dynamically registered client; Dave holds a live token and a
+      // refresh-expired one, Mallory holds her own live token, and Dave has
+      // an unconsumed in-flight authorization code.
+      const clientId = `dmsum_client_live_${randomUUID().slice(0, 8)}`;
+      await q(
+        `insert into public.oauth_clients (client_id, client_name, redirect_uris)
+         values ('${clientId}', 'Claude', array['https://claude.ai/api/mcp/auth_callback']);`
+      );
+      await q(
+        `insert into public.oauth_access_tokens
+           (token_hash, refresh_token_hash, user_id, client_id, resource, scope, access_expires_at, refresh_expires_at, created_at, last_used_at)
+         values
+           ('${"a".repeat(64)}', '${"b".repeat(64)}', '${dave.userId}', '${clientId}', 'https://sum.memsum.ai', 'mcp',
+            now() + interval '1 hour', now() + interval '30 days', now() - interval '2 days', now() - interval '1 hour'),
+           ('${"c".repeat(64)}', '${"d".repeat(64)}', '${dave.userId}', '${clientId}', 'https://sum.memsum.ai', 'mcp',
+            now() - interval '2 hours', now() - interval '1 hour', now() - interval '40 days', null),
+           ('${"e".repeat(64)}', '${"f".repeat(64)}', '${mallory.userId}', '${clientId}', 'https://sum.memsum.ai', 'mcp',
+            now() + interval '1 hour', now() + interval '30 days', now(), null);`
+      );
+      await q(
+        `insert into public.oauth_authorization_codes (code_hash, client_id, user_id, redirect_uri, resource, code_challenge)
+         values ('${"9".repeat(64)}', '${clientId}', '${dave.userId}', 'https://claude.ai/api/mcp/auth_callback', 'https://sum.memsum.ai', 'probe');`
+      );
+
+      // Dave sees exactly one aggregated grant; the refresh-expired row is
+      // invisible because it can no longer act.
+      await q(userClaims(dave.userId));
+      const listed = await q(`select public.list_oauth_grants() as r;`);
+      expect(listed.rows[0].r).toHaveLength(1);
+      expect(listed.rows[0].r[0]).toMatchObject({ clientId, clientName: "Claude", activeTokens: 1 });
+      expect(listed.rows[0].r[0].redirectUris).toContain("https://claude.ai/api/mcp/auth_callback");
+
+      // The definer functions are the only authenticated window: direct table
+      // access stays refused.
+      await q("savepoint probe");
+      await expect(q(`select count(*) from public.oauth_access_tokens;`)).rejects.toThrow(/permission denied/);
+      await q("rollback to savepoint probe");
+
+      // Revoke: both of Dave's unrevoked rows die (expired rows leave no
+      // zombie-unrevoked residue), his in-flight code closes, Mallory's grant
+      // survives untouched.
+      const revoked = await q(`select public.revoke_oauth_client_grants('${clientId}') as r;`);
+      expect(revoked.rows[0].r).toMatchObject({ revoked: true, revokedTokens: 2, closedCodes: 1 });
+
+      const after = await q(`select public.list_oauth_grants() as r;`);
+      expect(after.rows[0].r).toHaveLength(0);
+
+      // A second revoke answers honestly instead of pretending.
+      const again = await q(`select public.revoke_oauth_client_grants('${clientId}') as r;`);
+      expect(again.rows[0].r.revoked).toBe(false);
+
+      // Mallory still sees — and still holds — her own grant.
+      await q(userClaims(mallory.userId));
+      const malloryView = await q(`select public.list_oauth_grants() as r;`);
+      expect(malloryView.rows[0].r).toHaveLength(1);
+
+      await q(SERVICE_CLAIMS);
+      const state = await q(
+        `select
+           (select count(*)::int from public.oauth_access_tokens where user_id = '${dave.userId}' and revoked_at is not null) as dave_revoked,
+           (select count(*)::int from public.oauth_access_tokens where user_id = '${mallory.userId}' and revoked_at is null) as mallory_live,
+           (select count(*)::int from public.oauth_authorization_codes where user_id = '${dave.userId}' and consumed_at is null) as dave_open_codes;`
+      );
+      expect(state.rows[0]).toMatchObject({ dave_revoked: 2, mallory_live: 1, dave_open_codes: 0 });
+    });
+  }, 30000);
 });

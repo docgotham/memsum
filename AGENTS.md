@@ -56,6 +56,17 @@ The member-facing Companion (dashboard route `/companion`) is documented in
 method — consult it before touching manifests, icons, or install metadata on any Sum-family
 companion surface).
 
+Connected apps (dashboard route `/connections`, family convention in the constitution's
+"Connected apps — the authorization console" section, adopted 2026-07-19): one page lists
+everything that can act as the member — OAuth clients and connector tokens together. The
+`oauth_*` tables stay service-role-only; `list_oauth_grants()` / `revoke_oauth_client_grants()`
+(migration 20260719160000) are the only authenticated window, scoped to `auth.uid()`.
+Revocation invalidates that client's tokens and closes in-flight authorization codes but never
+touches member data; a dynamically registered client's self-asserted name is always displayed
+with its registered redirect host. The page's claims are drift-pinned. The hand-rolled OAuth
+store is deliberately frozen at current capability — the trigger list for converging on
+platform OAuth lives in the constitution's Roadmap B.
+
 ## Vocabulary
 
 - `+sum` means add, save, update, ask about, or retrieve shared relationship memory.

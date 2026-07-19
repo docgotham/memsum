@@ -38,7 +38,7 @@ export default function ConnectPage() {
       <div className="flex flex-col gap-2">
         <h2 className="font-semibold">ChatGPT</h2>
         <ol className="list-decimal space-y-1 pl-5 opacity-90">
-          <li>Open Settings → Connectors and add a new MCP server.</li>
+          <li>Open Settings → Plugins and add a new MCP server.</li>
           <li>Paste the connector URL above and approve the OAuth prompt by signing in.</li>
           <li>
             Ask a read-only question first: <em>&ldquo;+sum what are we tracking right now?&rdquo;</em>
@@ -106,7 +106,12 @@ export default function ConnectPage() {
       <ConnectorTokens />
 
       <p className="text-sm opacity-60">
-        Your AI client receives OAuth tokens, never your password.{" "}
+        Your AI client receives OAuth tokens, never your password. Everything that can act as you —
+        OAuth clients and connector tokens together — is reviewable on{" "}
+        <Link className="underline" href="/connections">
+          Connected apps
+        </Link>
+        .{" "}
         <Link className="underline" href="/tools">
           See everything your AI can do here
         </Link>
