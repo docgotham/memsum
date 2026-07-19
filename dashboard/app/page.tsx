@@ -69,9 +69,9 @@ export default function HomePage() {
             <p className="flex flex-wrap items-center gap-2 text-sm">
               <Link
                 className="rounded-full bg-accent-gold/25 px-2.5 py-0.5 font-medium text-foreground transition-colors hover:bg-accent-gold/40"
-                href="/pricing"
+                href="/beta"
               >
-                Free beta
+                In beta
               </Link>
               <span className="opacity-60">
                 Invitation-only for now — if someone shared a sum with you, open the invite link they sent.

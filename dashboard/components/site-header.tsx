@@ -40,8 +40,8 @@ export function SiteHeader() {
           <Link className="opacity-70 transition-opacity hover:opacity-100" href="/tools">
             Tools
           </Link>
-          <Link className="opacity-70 transition-opacity hover:opacity-100" href="/pricing">
-            Pricing
+          <Link className="opacity-70 transition-opacity hover:opacity-100" href="/beta">
+            Beta
           </Link>
           <Link className="opacity-70 transition-opacity hover:opacity-100" href="/connect">
             Connect

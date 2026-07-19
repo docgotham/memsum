@@ -21,8 +21,8 @@ export function SiteFooter() {
             <Link className="transition-opacity hover:opacity-70" href="/tools">
               Tools
             </Link>
-            <Link className="transition-opacity hover:opacity-70" href="/pricing">
-              Pricing
+            <Link className="transition-opacity hover:opacity-70" href="/beta">
+              The beta
             </Link>
             <Link className="transition-opacity hover:opacity-70" href="/open">
               Open source
@@ -42,7 +42,7 @@ export function SiteFooter() {
           </nav>
         </div>
         <p className="opacity-60">
-          Shared memory for the people who matter. Free beta — invitation-only, with a{" "}
+          Shared memory for the people who matter. In beta — invitation-only, with a{" "}
           <Link className="underline" href="/#waitlist">
             waitlist
           </Link>

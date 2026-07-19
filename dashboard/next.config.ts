@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // /pricing became /beta (2026-07-19): the page describes the beta and its
+  // limits, and deliberately says nothing about money. Permanent, so old
+  // links keep landing somewhere true.
+  async redirects() {
+    return [{ source: "/pricing", destination: "/beta", permanent: true }];
+  },
 };
 
 export default nextConfig;

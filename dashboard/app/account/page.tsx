@@ -89,7 +89,7 @@ export default function AccountPage() {
 
           {limits ? (
             <section className="flex flex-col gap-2">
-              <h2 className="font-semibold">Free beta limits</h2>
+              <h2 className="font-semibold">Beta limits</h2>
               <ul className="list-disc pl-5 text-sm opacity-80">
                 <li>Up to {limits.sumsCreatedPerAccount} sums created per account.</li>
                 <li>

@@ -2445,12 +2445,12 @@ describe("Mem·Sum public tool catalog", () => {
     expect(page).toMatch(/isolation is enforced by the database/);
   });
 
-  it("keeps the public pricing page telling the database's truth about limits", async () => {
+  it("keeps the public beta page telling the database's truth about limits, with no money talk", async () => {
     const migration = await fs.readFile(
       path.join(process.cwd(), "supabase", "migrations", "20260708150000_pilot_limits.sql"),
       "utf8"
     );
-    const page = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "pricing", "page.tsx"), "utf8");
+    const page = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "beta", "page.tsx"), "utf8");
 
     function limit(key: string): number {
       const match = migration.match(new RegExp(`'${key}', (\\d+)`));
@@ -2465,7 +2465,17 @@ describe("Mem·Sum public tool catalog", () => {
     expect(page).toContain(`${limit("pagesPerSum")} pages per sum`);
     expect(page).toContain(`${Math.round(limit("pageContentMaxBytes") / 1024)} KB per page`);
     expect(page).toContain(`2–${DEFAULT_PARTICIPANT_CAP} people`);
-    expect(page).toMatch(/Free while Mem·Sum is in beta/);
+    expect(page).toMatch(/Mem·Sum is in beta/);
+
+    // The framing decision (2026-07-19): this page describes a beta and never
+    // talks about money — no prices, no plans, no "free while", no someday.
+    // Comments aren't copy, so strip them before asserting absence.
+    const copy = page.replace(/^\s*\/\/.*$/gm, "");
+    expect(copy).not.toMatch(/\$\d|price|pricing|paid|free beta|monetiz/i);
+
+    // The old route survives only as a permanent redirect.
+    const config = await fs.readFile(path.join(process.cwd(), "dashboard", "next.config.ts"), "utf8");
+    expect(config).toMatch(/source: "\/pricing", destination: "\/beta", permanent: true/);
   });
 
   it("keeps a setup guide for every supported client on the connect page", async () => {
@@ -2611,7 +2621,7 @@ describe("Mem·Sum beta waitlist and site shell", () => {
       path.join(process.cwd(), "dashboard", "components", "site-header.tsx"),
       "utf8"
     );
-    for (const href of ['href="/"', 'href="/tools"', 'href="/pricing"', 'href="/connect"', 'href="/login"', 'href="/sums"']) {
+    for (const href of ['href="/"', 'href="/tools"', 'href="/beta"', 'href="/connect"', 'href="/login"', 'href="/sums"']) {
       expect(header).toContain(href);
     }
     // The header persists across client-side navigations, so it must track
@@ -2622,7 +2632,7 @@ describe("Mem·Sum beta waitlist and site shell", () => {
       path.join(process.cwd(), "dashboard", "components", "site-footer.tsx"),
       "utf8"
     );
-    for (const href of ['href="/tools"', 'href="/pricing"', 'href="/open"', 'href="/connect"', 'href="/account"', 'href="/terms"', 'href="/privacy"']) {
+    for (const href of ['href="/tools"', 'href="/beta"', 'href="/open"', 'href="/connect"', 'href="/account"', 'href="/terms"', 'href="/privacy"']) {
       expect(footer).toContain(href);
     }
   });
@@ -2872,8 +2882,8 @@ describe("Mem·Sum private sums (Phase 3: just you)", () => {
     expect(home).toMatch(/no second\s+subscription so a notes app can think/);
     expect(home).toMatch(/as many assistants as you like/);
 
-    const pricing = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "pricing", "page.tsx"), "utf8");
-    expect(pricing).toMatch(/sums for just you or for up to five people/);
+    const beta = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "beta", "page.tsx"), "utf8");
+    expect(beta).toMatch(/sums for just you or for up to five people/);
 
     const layout = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "layout.tsx"), "utf8");
     expect(layout).toMatch(/private to just you, or shared by up to five people/);
@@ -3027,8 +3037,8 @@ describe("Mem·Sum open kernel pre-flight", () => {
     expect(bare).toMatchObject({ ok: true, commit: null, source: null });
   });
 
-  it("states the run-it-yourself philosophy on the pricing page", async () => {
-    const page = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "pricing", "page.tsx"), "utf8");
+  it("states the run-it-yourself philosophy on the beta page", async () => {
+    const page = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "beta", "page.tsx"), "utf8");
     expect(page).toMatch(/Run it yourself/);
     expect(page).toMatch(/is open source under Apache-2\.0/);
     expect(page).toMatch(/genuinely encourage you to run your own/);
@@ -3038,7 +3048,7 @@ describe("Mem·Sum open kernel pre-flight", () => {
 
   it("explains the license, the approach, and build-your-own on the /open page", async () => {
     const page = await fs.readFile(path.join(process.cwd(), "dashboard", "app", "open", "page.tsx"), "utf8");
-    // Same pinned phrase as the pricing page, so the cutover copy flip
+    // Same pinned phrase as the beta page, so the cutover copy flip
     // ("goes" -> "is") sweeps both pages together.
     expect(page).toMatch(/is open source under Apache-2\.0/);
     expect(page).toMatch(/Apache-2\.0: use it, change it, self-host it/);

@@ -46,7 +46,7 @@ assert the strings that actually ran, including pre-rename "DM Sum" strings.
 Test discipline: run bare `npm test` (never piped through grep — a pipe masks the exit code).
 The live harness (`test/live.test.ts`) runs only when `DMSUM_TEST_DATABASE_URL` is set in the
 gitignored root `.env` and rolls back everything it touches. Public pages are pinned to code by
-drift tests — the tool catalog to the tool registry, pricing numbers to the limits migration,
+drift tests — the tool catalog to the tool registry, the beta page's limit numbers to the limits migration (/pricing became /beta 2026-07-19: beta framing, no monetization language — a drift test pins the absence),
 the privacy processor roster to the page — so page, code, and test change together in one
 commit or the suite fails.
 

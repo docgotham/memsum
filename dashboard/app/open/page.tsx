@@ -82,8 +82,8 @@ export default function OpenPage() {
 
       <p className="text-sm opacity-60">
         More plain language:{" "}
-        <Link className="underline" href="/pricing">
-          Pricing
+        <Link className="underline" href="/beta">
+          The beta
         </Link>{" "}
         ·{" "}
         <Link className="underline" href="/tools">
