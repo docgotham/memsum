@@ -2467,6 +2467,14 @@ describe("Mem·Sum public tool catalog", () => {
     expect(page).toContain(`2–${DEFAULT_PARTICIPANT_CAP} people`);
     expect(page).toMatch(/Mem·Sum is in beta/);
 
+    // "Why free?" gets the one answer that needs no money talk: the beta is
+    // a UX playground, and the value is the learning. The section names Dave
+    // and points feedback at his site.
+    expect(page).toMatch(/Why free\?/);
+    expect(page).toMatch(/UX playground/);
+    expect(page).toContain("Dave Gilbert");
+    expect(page).toContain('href="https://aftertheapp.com/"');
+
     // The framing decision (2026-07-19): this page describes a beta and never
     // talks about money — no prices, no plans, no "free while", no someday.
     // Comments aren't copy, so strip them before asserting absence.

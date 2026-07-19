@@ -67,6 +67,24 @@ export default function BetaPage() {
       </section>
 
       <section className="flex flex-col gap-2">
+        <h2 className="text-xl font-semibold">Why free?</h2>
+        <p className="opacity-80">
+          Because this beta is a UX playground. Mem·Sum is built and run by{" "}
+          <a className="underline" href="https://aftertheapp.com/" rel="noopener" target="_blank">
+            Dave Gilbert
+          </a>
+          , a product developer and user-experience researcher, and what he wants from it is what a beta is
+          actually for: real people and their own assistants, sharing memory for real things, and the lessons
+          that only come from watching that honestly. If you want to give Dave feedback — how he can improve
+          it, or just what you think of it — reach out through his site,{" "}
+          <a className="underline" href="https://aftertheapp.com/" rel="noopener" target="_blank">
+            aftertheapp.com
+          </a>
+          .
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Run it yourself</h2>
         <p className="opacity-80">
           The software is free: Mem·Sum&apos;s kernel is open source under Apache-2.0, and we
