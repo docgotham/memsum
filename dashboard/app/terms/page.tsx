@@ -77,7 +77,7 @@ export default function TermsPage() {
           copies of anything you cannot afford to lose; you can request an export of your data at any time.
           Features and these terms may change — material changes will be posted here with a new effective date,
           and continued use after a change is acceptance. To the extent permitted by law, our liability is
-          limited to the amount you paid for the service, which during the beta is zero.
+          limited to the amount you have paid for the service — Mem·Sum is free, so that amount is zero.
         </p>
       </section>
 

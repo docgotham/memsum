@@ -74,9 +74,16 @@ export default function BetaPage() {
             Dave Gilbert
           </a>
           , a product developer and user-experience researcher, and what he wants from it is what a beta is
-          actually for: real people and their own assistants, sharing memory for real things, and the lessons
-          that only come from watching that honestly. If you want to give Dave feedback — how he can improve
-          it, or just what you think of it — reach out through his site,{" "}
+          actually for: the product getting real use, and the lessons people choose to share. To be clear
+          about what that does not mean: your sums are not research material. No one reads your content — not
+          even Dave. The operator&apos;s admin view is content-blind by construction, there are no analytics
+          anywhere, and the{" "}
+          <Link className="underline" href="/privacy">
+            privacy page
+          </Link>{" "}
+          spells out exactly who can see what. What Dave learns comes from his own sums, and from you only if
+          you tell him. So tell him: if you want to give feedback — how he can improve it, or just what you
+          think of it — reach out through his site,{" "}
           <a className="underline" href="https://aftertheapp.com/" rel="noopener" target="_blank">
             aftertheapp.com
           </a>

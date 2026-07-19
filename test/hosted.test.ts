@@ -2469,11 +2469,18 @@ describe("Mem·Sum public tool catalog", () => {
 
     // "Why free?" gets the one answer that needs no money talk: the beta is
     // a UX playground, and the value is the learning. The section names Dave
-    // and points feedback at his site.
+    // and points feedback at his site — and states plainly that members'
+    // content is not research material: no one reads it, not even Dave
+    // (content-blind admin is the test-enforced property behind the sentence).
     expect(page).toMatch(/Why free\?/);
     expect(page).toMatch(/UX playground/);
     expect(page).toContain("Dave Gilbert");
     expect(page).toContain('href="https://aftertheapp.com/"');
+    expect(page).toMatch(/your sums are not research material/);
+    expect(page).toMatch(/No one reads your content — not\s+even Dave/);
+    expect(page).toMatch(/content-blind by construction/);
+    expect(page).toContain('href="/privacy"');
+    expect(page).not.toMatch(/watching that honestly/);
 
     // The framing decision (2026-07-19): this page describes a beta and never
     // talks about money — no prices, no plans, no "free while", no someday.
